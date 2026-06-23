@@ -1,25 +1,123 @@
 """
 python manage.py export_packets <slug> [--output-dir ./packets]
 
-Generates one HTML file per team per activity.
+Generates one printable HTML sheet per team per activity.
 
 Layout (portrait letter):
   ┌─────────────────────────────┐
   │  TOP 1/3 — team name +      │  ← stays visible when sheet is folded
-  │            door title        │
+  │            door title +      │
+  │            LOGIN PASSWORD    │
   ├ ─ ─ ─ ─ fold here ─ ─ ─ ─ ┤
-  │                              │
-  │  BOTTOM 2/3 — instructions   │  ← fold behind/inward to hide contents
-  │                              │
+  │  CS/AI/Cybersecurity context │
+  │  Activity instructions       │
   └─────────────────────────────┘
 
 Output files:  packets/<TeamName>-door-<N>.html
 Open in a browser and use File → Print (or Cmd/Ctrl+P).
 """
+import json as _json
 import textwrap
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
+
+
+# ── CS / AI / Cybersecurity connection descriptions ───────────────────────────
+
+CS_CONNECTIONS = {
+    "test_case_runner": {
+        "label": "Computer Science — Algorithms & Programming",
+        "body": (
+            "<p>Writing loops and conditionals is the foundation of every program ever built "
+            "— from mobile apps to AI models running on supercomputers. Finding the largest "
+            "or smallest value in a list is a classic <em>linear search</em> problem. "
+            "Computer scientists measure algorithm efficiency using <em>Big-O notation</em>: "
+            "this approach is <strong>O(n)</strong>, meaning it takes one pass through the "
+            "data regardless of what the values are. That makes it both simple and optimal — "
+            "you cannot find the answer without looking at every element at least once.</p>"
+            "<p>Every search engine, recommendation system, and AI training loop runs "
+            "variations of this same idea billions of times per second.</p>"
+        ),
+    },
+    "decode_compare": {
+        "label": "Cybersecurity — Cryptography &amp; Encryption",
+        "body": (
+            "<p>The Caesar cipher is one of the earliest encryption algorithms on record, "
+            "used by Julius Caesar around 50 BCE to protect military orders. It works by "
+            "<em>shifting</em> every letter a fixed number of places in the alphabet — "
+            "simple, but breakable with only 25 guesses. That is a <em>brute-force attack</em>.</p>"
+            "<p>Modern encryption (AES-256, RSA, elliptic-curve) applies the same idea — "
+            "transform data so only authorized parties can read it — but with keys so large "
+            "that brute-forcing them would take longer than the age of the universe. "
+            "Cybersecurity professionals study cryptography to protect everything from "
+            "banking transactions to government secrets. A small math mistake can expose "
+            "millions of people's data.</p>"
+        ),
+    },
+    "secret_match": {
+        "label": "AI &amp; Cybersecurity — Prompt Injection",
+        "body": (
+            "<p><em>Large Language Models</em> (LLMs) — the technology behind ChatGPT, "
+            "Gemini, and Claude — are trained to follow instructions embedded in a "
+            "<em>system prompt</em> that users normally cannot see. <em>Prompt injection</em> "
+            "is a real attack technique where a user crafts a message that tricks the AI "
+            "into ignoring those hidden instructions and doing something it was told not to.</p>"
+            "<p>This is an active research area at every major AI lab. Engineers who deploy "
+            "AI systems spend considerable effort on <em>prompt hardening</em> — designing "
+            "system prompts that resist manipulation. AI safety researchers study these "
+            "vulnerabilities to understand how to build more reliable, trustworthy systems. "
+            "If you're interested in AI or cybersecurity, this intersection is one of the "
+            "fastest-growing career fields in tech.</p>"
+        ),
+    },
+    "match_grader": {
+        "label": "Cybersecurity — Social Engineering &amp; Human Factors",
+        "body": (
+            "<p>Technical defenses — firewalls, encryption, antivirus software — only "
+            "protect against technical attacks. <em>Social engineering</em> bypasses "
+            "technology entirely by exploiting human psychology: urgency, authority, "
+            "curiosity, and trust. Studies consistently show that <strong>80–95% of "
+            "successful cyberattacks</strong> involve a human being tricked rather than "
+            "a system being hacked.</p>"
+            "<p>Cybersecurity professionals must understand not just code but also "
+            "behavior — the \"wetware\" is often the weakest link. Recognizing these "
+            "techniques in real life (phishing emails, fake IT calls, suspicious links) "
+            "is one of the most practical skills a computer science or cybersecurity "
+            "student can develop.</p>"
+        ),
+    },
+    "order_match": {
+        "label": "Computer Science — Algorithm Design &amp; Robotics",
+        "body": (
+            "<p>An <em>algorithm</em> is a precise, ordered sequence of instructions "
+            "for solving a problem — the most fundamental concept in computer science. "
+            "Order matters: swap two steps and the result is completely wrong. This is "
+            "exactly how robots, 3D printers, CNC machines, and autonomous vehicles "
+            "work: translating a high-level goal (\"draw a triangle\", \"pick up this "
+            "object\") into an exact sequence of low-level actions.</p>"
+            "<p>AI planning systems face this same challenge — given a goal, determine "
+            "the correct sequence of actions. Turtle graphics were invented in the 1960s "
+            "by Seymour Papert at MIT as a tool to teach this kind of algorithmic "
+            "thinking, and they remain one of the clearest ways to see computation in "
+            "action. The same ideas underlie modern robot motion planning and game AI.</p>"
+        ),
+    },
+    "manual_staff": {
+        "label": "Computer Science — Human-in-the-Loop Systems",
+        "body": (
+            "<p>Not everything should be automated. In safety-critical systems — "
+            "medical devices, air-traffic control, nuclear power plants, large financial "
+            "transactions — a <em>human-in-the-loop</em> check is required even when "
+            "full automation is technically possible. The human provides judgment, "
+            "accountability, and a check against edge cases the system was not designed for.</p>"
+            "<p>This is an active design consideration in AI systems today: when should "
+            "an AI act autonomously, and when should it pause and ask a human? Getting "
+            "that balance right is one of the central questions of responsible AI "
+            "development and a key topic in both AI and cybersecurity degrees.</p>"
+        ),
+    },
+}
 
 
 # ── prose blocks ─────────────────────────────────────────────────────────────
@@ -74,9 +172,6 @@ PAGE_HTML = """\
 
   *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
-  /* ------------------------------------------------------------------ *
-   * Full-page sheet split into top-1/3 (cover) + bottom-2/3 (content)  *
-   * ------------------------------------------------------------------ */
   html, body {{
     width:  8.5in;
     height: 11in;
@@ -93,7 +188,7 @@ PAGE_HTML = """\
     flex-direction: column;
   }}
 
-  /* ---- top third: the "label" that stays visible after folding ---- */
+  /* ---- top third: visible after folding ---- */
   .cover {{
     flex: 0 0 calc(11in / 3);
     display: flex;
@@ -101,7 +196,7 @@ PAGE_HTML = """\
     justify-content: center;
     align-items: center;
     text-align: center;
-    padding: 0.4in 0.7in;
+    padding: 0.3in 0.7in;
     background: {cover_bg};
     border-bottom: none;
   }}
@@ -112,30 +207,52 @@ PAGE_HTML = """\
     letter-spacing: .1em;
     text-transform: uppercase;
     color: {cover_dim};
-    margin-bottom: 0.12in;
+    margin-bottom: 0.1in;
   }}
 
   .cover-team {{
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 36pt;
+    font-size: 34pt;
     font-weight: 700;
     color: {cover_text};
     line-height: 1.1;
-    margin-bottom: 0.1in;
+    margin-bottom: 0.08in;
   }}
 
   .cover-door {{
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 14pt;
+    font-size: 13pt;
     font-weight: 600;
     color: {cover_accent};
-    margin-bottom: 0.06in;
+    margin-bottom: 0.04in;
   }}
 
   .cover-title {{
     font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 12pt;
+    font-size: 11.5pt;
     color: {cover_dim};
+    margin-bottom: 0.14in;
+  }}
+
+  .cover-password-label {{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: {cover_dim};
+    margin-bottom: 0.04in;
+  }}
+
+  .cover-password {{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20pt;
+    font-weight: 700;
+    color: {cover_text};
+    background: rgba(255,255,255,0.08);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 0.05in 0.25in;
+    letter-spacing: .08em;
   }}
 
   /* ---- fold indicator ---- */
@@ -159,14 +276,14 @@ PAGE_HTML = """\
     color: {fold_color};
   }}
 
-  /* ---- bottom two-thirds: the instructions ---- */
+  /* ---- bottom two-thirds: instructions ---- */
   .content {{
     flex: 1 1 0;
-    padding: 0.45in 0.7in 0.35in;
+    padding: 0.38in 0.7in 0.3in;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 0.18in;
+    gap: 0.13in;
   }}
 
   .content-header {{
@@ -176,28 +293,68 @@ PAGE_HTML = """\
     color: #12141a;
     border-left: 5px solid {accent};
     padding-left: 0.12in;
+    margin-bottom: 0.02in;
+  }}
+
+  .cs-connection {{
+    background: #f0f4ff;
+    border-left: 4px solid {accent};
+    border-radius: 0 6px 6px 0;
+    padding: 0.1in 0.14in;
+  }}
+
+  .cs-connection-label {{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: {accent};
     margin-bottom: 0.05in;
   }}
 
+  .cs-connection p {{
+    font-size: 9.5pt;
+    line-height: 1.5;
+    color: #2b2d34;
+    margin-bottom: 0.05in;
+  }}
+  .cs-connection p:last-child {{ margin-bottom: 0; }}
+
+  .activity-section {{
+    display: flex;
+    flex-direction: column;
+    gap: 0.08in;
+  }}
+
+  .activity-label {{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #6b6f7b;
+  }}
+
   p, li {{
-    font-size: 11pt;
-    line-height: 1.55;
+    font-size: 10.5pt;
+    line-height: 1.5;
     color: #2b2d34;
   }}
 
   ul {{
     padding-left: 1.2em;
-    margin: 0.06in 0;
+    margin: 0.04in 0;
   }}
-  li {{ margin-bottom: 0.04in; }}
+  li {{ margin-bottom: 0.03in; }}
 
   pre, .cipher-box {{
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 11pt;
+    font-size: 10.5pt;
     background: #f7f5ee;
     border: 1.5px solid #ece9e1;
     border-radius: 6px;
-    padding: 0.14in 0.16in;
+    padding: 0.12in 0.14in;
     white-space: pre-wrap;
     word-break: break-word;
     line-height: 1.6;
@@ -213,12 +370,12 @@ PAGE_HTML = """\
   }}
 
   .cipher-box {{
-    font-size: 13pt;
+    font-size: 12.5pt;
     letter-spacing: .05em;
     color: #c0392b;
     background: #fff8f8;
     border-color: #fecdcd;
-    margin: 0.06in 0 0.04in;
+    margin: 0.04in 0;
   }}
 
   .hint {{
@@ -232,12 +389,12 @@ PAGE_HTML = """\
     background: #f3f1ea;
     border-left: 4px solid #dedad3;
     border-radius: 0 6px 6px 0;
-    padding: 0.12in 0.15in;
-    font-size: 10pt;
+    padding: 0.1in 0.13in;
+    font-size: 9.5pt;
     color: #4b4f5b;
     line-height: 1.5;
   }}
-  .explainer p {{ margin-bottom: 0.07in; }}
+  .explainer p {{ margin-bottom: 0.06in; }}
   .explainer p:last-child {{ margin-bottom: 0; }}
 
   .staff-note {{
@@ -246,27 +403,27 @@ PAGE_HTML = """\
     font-style: italic;
     border-left: 3px solid #dedad3;
     padding-left: 0.1in;
-    margin-top: 0.08in;
+    margin-top: 0.06in;
   }}
 
   /* ── technique reference table (match_pairs) ── */
   .technique-table {{
     width: 100%;
     border-collapse: collapse;
-    font-size: 9.5pt;
-    margin: 0.06in 0 0.08in;
+    font-size: 9pt;
+    margin: 0.04in 0 0.06in;
   }}
   .technique-table th {{
     background: #1c1e24;
     color: #e9e7e1;
     text-align: left;
-    padding: 4px 8px;
+    padding: 3px 7px;
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 9pt;
+    font-size: 8.5pt;
     letter-spacing: .04em;
   }}
   .technique-table td {{
-    padding: 4px 8px;
+    padding: 3px 7px;
     border-bottom: 1px solid #e5e3db;
     color: #2b2d34;
     vertical-align: top;
@@ -277,25 +434,44 @@ PAGE_HTML = """\
     font-weight: 600;
     white-space: nowrap;
     color: {accent};
-    width: 1.6in;
+    width: 1.55in;
+  }}
+
+  /* ── scenarios list (match_pairs) ── */
+  .scenario-list {{
+    list-style: none;
+    padding: 0;
+    margin: 0.04in 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }}
+  .scenario-list li {{
+    font-size: 9.5pt;
+    background: #f7f5ee;
+    border: 1.5px solid #ece9e1;
+    border-radius: 5px;
+    padding: 4px 9px;
+    color: #1c1e24;
+    font-style: italic;
   }}
 
   /* ── scrambled pseudocode lines (pseudocode_order) ── */
   .scrambled-lines {{
     list-style: none;
     padding: 0;
-    margin: 0.08in 0;
+    margin: 0.04in 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
   }}
   .scrambled-lines li {{
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 10.5pt;
+    font-size: 10pt;
     background: #f7f5ee;
     border: 1.5px solid #ece9e1;
     border-radius: 5px;
-    padding: 5px 10px;
+    padding: 4px 9px;
     color: #1c1e24;
   }}
 
@@ -315,6 +491,7 @@ PAGE_HTML = """\
     <div class="cover-team">{team_name}</div>
     <div class="cover-door">Door {order}</div>
     <div class="cover-title">{title}</div>
+    {password_html}
   </div>
 
   <!-- fold line -->
@@ -323,7 +500,11 @@ PAGE_HTML = """\
   <!-- BOTTOM 2/3 — fold inward to hide -->
   <div class="content">
     <div class="content-header">{title}</div>
+    {cs_block_html}
+    <div class="activity-section">
+      <div class="activity-label">Your Task</div>
 {body_html}
+    </div>
   </div>
 
 </div>
@@ -356,11 +537,25 @@ def _theme(order):
 DOOR_THEMES = {i + 1: {**_THEME_BASE, **p} for i, p in enumerate(_THEME_PALETTE)}
 
 
-# ── per-activity body HTML builders ─────────────────────────────────────────
+# ── helpers ───────────────────────────────────────────────────────────────────
 
 def _h(text):
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+
+def _cs_block(grader_type, accent):
+    info = CS_CONNECTIONS.get(grader_type)
+    if not info:
+        return ""
+    return (
+        f'<div class="cs-connection">'
+        f'<div class="cs-connection-label">{info["label"]}</div>'
+        f'{info["body"]}'
+        f'</div>'
+    )
+
+
+# ── per-activity body HTML builders ──────────────────────────────────────────
 
 def _body_blank_fill(cfg):
     template = cfg.get("template", "")
@@ -368,80 +563,89 @@ def _body_blank_fill(cfg):
     before = _h(parts[0]) if parts else ""
     after  = _h(parts[1]) if len(parts) > 1 else ""
     return (
-        '    <p>Complete the program by filling in the missing line:</p>\n'
-        f'    <pre>{before}<span class="blank-line">_______________</span>{after}</pre>\n'
-        '    <p>Your solution must work correctly for several different random number lists. '
+        '      <p>Complete the program by filling in the missing line:</p>\n'
+        f'      <pre>{before}<span class="blank-line">_______________</span>{after}</pre>\n'
+        '      <p>Your solution must work correctly for several different random number lists. '
         'Enter the missing line on the web page to test it.</p>'
     )
 
 
 def _body_decode_compare(cfg):
     from escaperoom.graders import caesar_encode
-    plaintext = cfg.get("plaintext", "")
-    shift     = cfg.get("shift", 0)
+    plaintext  = cfg.get("plaintext", "")
+    shift      = cfg.get("shift", 0)
     ciphertext = caesar_encode(plaintext, shift)
     first_word = plaintext.split()[0] if cfg.get("first_word_hint") and plaintext else None
 
     hint_html = (
-        f'    <p class="hint">First word decodes to: <strong>{_h(first_word)}</strong></p>\n'
+        f'      <p class="hint">First word decodes to: <strong>{_h(first_word)}</strong></p>\n'
         if first_word else ""
     )
     explainer_paras = "".join(f"<p>{p}</p>" for p in CIPHER_EXPLAINER_PARAS)
 
     return (
-        '    <p>Decode this message:</p>\n'
-        f'    <div class="cipher-box">{_h(ciphertext)}</div>\n'
+        '      <p>Decode this message:</p>\n'
+        f'      <div class="cipher-box">{_h(ciphertext)}</div>\n'
         f'{hint_html}'
-        f'    <div class="explainer">{explainer_paras}</div>'
+        f'      <div class="explainer">{explainer_paras}</div>'
     )
 
 
 def _body_secret_match():
-    return f'    {LLM_TIPS_HTML.strip()}'
+    return f'      {LLM_TIPS_HTML.strip()}'
 
 
 def _body_manual_staff(cfg):
     instructions = cfg.get("instructions", "")
     return (
-        f'    <p>{_h(instructions)}</p>\n'
-        '    <p class="staff-note">Nothing to submit on the web — '
+        f'      <p>{_h(instructions)}</p>\n'
+        '      <p class="staff-note">Nothing to submit on the web — '
         'a staff member will mark this door complete once they see you finish.</p>'
     )
 
 
-def _body_match_pairs(cfg):
-    """Packet for social-engineering match activity: technique reference table + instructions."""
+def _body_match_pairs(cfg, team, act):
+    """Show the technique reference table + this team's specific 5 scenarios."""
+    from escaperoom.graders import _get_team_pairs
     technique_descriptions = cfg.get("technique_descriptions", [])
-    pairs = cfg.get("pairs", [])
 
+    # Build technique reference table
     if technique_descriptions:
         rows = "".join(
             f'<tr><td>{_h(td["name"])}</td><td>{_h(td["description"])}</td></tr>'
             for td in technique_descriptions
         )
         table_html = (
-            '    <p><strong>Social Engineering Techniques — Reference Guide</strong></p>\n'
-            '    <table class="technique-table">\n'
-            '      <thead><tr><th>Technique</th><th>Description</th></tr></thead>\n'
-            f'      <tbody>{rows}</tbody>\n'
-            '    </table>\n'
+            '      <p><strong>Social Engineering Techniques — Reference</strong></p>\n'
+            '      <table class="technique-table">\n'
+            '        <thead><tr><th>Technique</th><th>What it exploits</th></tr></thead>\n'
+            f'        <tbody>{rows}</tbody>\n'
+            '      </table>\n'
         )
     else:
         table_html = ""
 
-    if pairs:
-        scenario_list = "".join(
-            f'<li>"{_h(p["scenario"])}"</li>' for p in pairs
+    # Show this team's specific scenarios (deterministic selection)
+    if team and act:
+        selected = _get_team_pairs(cfg, team, act)
+        scenario_items = "".join(
+            f'<li>"{_h(pair["scenario"])}"</li>'
+            for _, pair in selected
         )
         scenarios_html = (
-            '    <p><strong>Scenarios to match:</strong></p>\n'
-            f'    <ul>{scenario_list}</ul>\n'
+            '      <p><strong>Your 5 scenarios to match:</strong></p>\n'
+            f'      <ul class="scenario-list">{scenario_items}</ul>\n'
         )
     else:
-        scenarios_html = ""
+        pairs = cfg.get("pairs", [])
+        scenario_items = "".join(f'<li>"{_h(p["scenario"])}"</li>' for p in pairs)
+        scenarios_html = (
+            '      <p><strong>Scenarios to match:</strong></p>\n'
+            f'      <ul class="scenario-list">{scenario_items}</ul>\n'
+        )
 
     instructions = (
-        '    <p>On the web page, drag each technique label onto the scenario it describes. '
+        '      <p>On the web page, drag each technique label onto the scenario it describes. '
         'Use the reference table above to help you decide.</p>'
     )
 
@@ -449,11 +653,11 @@ def _body_match_pairs(cfg):
 
 
 def _body_pseudocode_order(cfg, team, act):
-    """Packet for algorithm-reconstruction activity: scrambled lines per team."""
+    """Show per-team scrambled lines (same seed as the web UI)."""
     import random as _random
-    lines = cfg.get("lines", [])
+    lines       = cfg.get("lines", [])
     description = cfg.get("description", "")
-    image_file = cfg.get("image_file", "")
+    image_file  = cfg.get("image_file", "")
 
     # Match the same shuffle seed used by the web UI
     team_pk = team.pk if team else 0
@@ -463,15 +667,15 @@ def _body_pseudocode_order(cfg, team, act):
     rng.shuffle(indices)
     scrambled = [lines[i] for i in indices]
 
-    desc_html = f'    <p>{_h(description)}</p>\n' if description else ""
+    desc_html = f'      <p>{_h(description)}</p>\n' if description else ""
     img_note  = (
-        '    <p><em>(See the image on the web page for the target figure.)</em></p>\n'
+        '      <p><em>(See the image on the web page for the target figure.)</em></p>\n'
         if image_file else ""
     )
     items = "".join(f'<li>{_h(line)}</li>' for line in scrambled)
     lines_html = (
-        '    <p>The steps below are scrambled. On the web page, drag them into the correct order:</p>\n'
-        f'    <ul class="scrambled-lines">{items}</ul>\n'
+        '      <p>The steps below are scrambled. On the web page, drag them into the correct order:</p>\n'
+        f'      <ul class="scrambled-lines">{items}</ul>\n'
     )
 
     return desc_html + img_note + lines_html
@@ -487,13 +691,13 @@ def _build_body(grader_type, cfg, team=None, act=None):
     elif grader_type == "manual_staff":
         return _body_manual_staff(cfg)
     elif grader_type == "match_grader":
-        return _body_match_pairs(cfg)
+        return _body_match_pairs(cfg, team, act)
     elif grader_type == "order_match":
         return _body_pseudocode_order(cfg, team, act)
-    return "    <p>(No instructions defined.)</p>"
+    return "      <p>(No instructions defined.)</p>"
 
 
-# ── command ──────────────────────────────────────────────────────────────────
+# ── command ───────────────────────────────────────────────────────────────────
 
 class Command(BaseCommand):
     help = "Export one printable HTML sheet per team per activity."
@@ -510,6 +714,24 @@ class Command(BaseCommand):
             session = Session.objects.get(slug=slug)
         except Session.DoesNotExist:
             raise CommandError(f"Session '{slug}' not found.")
+
+        # Try to load plain-text passwords from sessions/<slug>.json
+        password_map = {}
+        json_candidates = [
+            Path(f"sessions/{slug}.json"),
+            Path(f"sessions/{slug.lower()}.json"),
+            Path(f"sessions/{slug.upper()}.json"),
+        ]
+        for candidate in json_candidates:
+            if candidate.exists():
+                try:
+                    with open(candidate, encoding="utf-8") as f:
+                        data = _json.load(f)
+                    password_map = {t["name"]: t["password"] for t in data.get("teams", [])}
+                    self.stdout.write(f"  Passwords loaded from {candidate}")
+                except Exception:
+                    pass
+                break
 
         out_dir = Path(options["output_dir"])
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -529,14 +751,27 @@ class Command(BaseCommand):
                 except TeamActivityProgress.DoesNotExist:
                     cfg = act.config
 
-                theme = _theme(act.order)
-                body  = _build_body(act.grader_type, cfg, team=team, act=act)
+                theme    = _theme(act.order)
+                body     = _build_body(act.grader_type, cfg, team=team, act=act)
+                cs_block = _cs_block(act.grader_type, theme["accent"])
+
+                # Password block for cover
+                plain_pw = password_map.get(team.name, "")
+                if plain_pw:
+                    password_html = (
+                        '<div class="cover-password-label">Login Password</div>'
+                        f'<div class="cover-password">{_h(plain_pw)}</div>'
+                    )
+                else:
+                    password_html = ""
 
                 html = PAGE_HTML.format(
                     session_name  = _h(session.name),
                     team_name     = _h(team.name),
                     order         = act.order,
                     title         = _h(act.title),
+                    password_html = password_html,
+                    cs_block_html = cs_block,
                     body_html     = body,
                     **theme,
                 )
