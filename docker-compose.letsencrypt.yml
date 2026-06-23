@@ -1,0 +1,31 @@
+# Let's Encrypt override — use instead of docker-compose.yml when DOMAIN is set in .env:
+#   docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml up -d
+#
+# First-time cert setup: bash nginx/init-letsencrypt.sh
+# Renewal: docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml run --rm certbot renew \
+#            && docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml exec nginx nginx -s reload
+
+services:
+  nginx:
+    environment:
+      - DOMAIN=${DOMAIN}
+      - NGINX_ENVSUBST_TEMPLATE_VARS=DOMAIN
+    volumes:
+      - ./nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./data/certbot/conf:/etc/letsencrypt:ro
+      - ./data/certbot/www:/var/www/certbot:ro
+      - staticfiles:/app/staticfiles:ro
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    entrypoint: >
+      certbot certonly
+        --webroot
+        --webroot-path=/var/www/certbot
+        --email ${LETSENCRYPT_EMAIL}
+        --agree-tos
+        --no-eff-email
+        -d ${DOMAIN}

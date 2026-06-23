@@ -27,22 +27,27 @@ openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
     -out "$CERT_DIR/fullchain.pem" \
     -subj "/CN=$DOMAIN" 2>/dev/null
 
+DC="docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml"
+
 echo ""
 echo "==> Starting web and nginx..."
-docker compose up -d web nginx
+$DC up -d web nginx
 echo "    Waiting 5s for nginx to be ready..."
 sleep 5
 
 echo ""
 echo "==> Requesting Let's Encrypt certificate..."
-docker compose run --rm certbot
+$DC run --rm certbot
 
 echo ""
 echo "==> Reloading nginx with the real certificate..."
-docker compose exec nginx nginx -s reload
+$DC exec nginx nginx -s reload
 
 echo ""
 echo "==> Done! Certificate obtained for $DOMAIN."
 echo ""
-echo "    To renew (run periodically, e.g. via cron):"
-echo "      docker compose run --rm certbot renew && docker compose exec nginx nginx -s reload"
+echo "    Start normally with:"
+echo "      docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml up -d"
+echo ""
+echo "    To renew (add to cron):"
+echo "      $DC run --rm certbot renew && $DC exec nginx nginx -s reload"
