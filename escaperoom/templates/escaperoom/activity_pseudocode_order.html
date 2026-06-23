@@ -1,0 +1,225 @@
+{% extends "escaperoom/base.html" %}
+{% load static %}
+{% block title %}Door {{ activity.order }} — {{ activity.title }}{% endblock %}
+
+{% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .sort-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 18px 0;
+    user-select: none;
+  }
+
+  .sort-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: grab;
+    transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  }
+
+  .sort-item:active { cursor: grabbing; }
+  .sort-item.dragging  { opacity: 0.4; }
+  .sort-item.drag-over { border-color: var(--violet); background: color-mix(in srgb, var(--violet) 10%, var(--surface)); }
+
+  .sort-handle {
+    color: var(--muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    flex-shrink: 0;
+    touch-action: none;
+  }
+
+  .sort-item pre {
+    margin: 0;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9rem;
+    white-space: pre;
+    flex: 1;
+    color: var(--text);
+  }
+
+  .sort-arrows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .sort-arrows button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--muted);
+    font-size: 0.65rem;
+    line-height: 1;
+    padding: 2px 4px;
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s;
+  }
+
+  .sort-arrows button:hover {
+    color: var(--text);
+    border-color: var(--text);
+  }
+
+  .sort-image {
+    max-width: 360px;
+    width: 100%;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    margin: 12px auto 18px;
+    display: block;
+  }
+
+  .sort-description {
+    color: var(--text);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="eyebrow" style="--accent:var(--violet);">Door {{ activity.order }} — Algorithm</div>
+<h2>{{ activity.title }}</h2>
+
+{% if last_result and last_result.activity_id == activity.pk %}
+  {% if last_result.passed %}
+    <div class="result pass">{{ last_result.detail }}</div>
+  {% else %}
+    <div class="result fail">{{ last_result.detail }}</div>
+  {% endif %}
+{% endif %}
+
+{% if rate_limited %}
+  <div class="result fail">
+    Please wait {% if attempt_delay > 2 %}{{ attempt_delay }} seconds{% else %}a moment{% endif %} before trying again — take time to think through the order.
+  </div>
+{% endif %}
+
+{% if description %}
+  <p class="sort-description">{{ description }}</p>
+{% endif %}
+
+{% if image_file %}
+  <img src="{% static 'escaperoom/images/' %}{{ image_file }}"
+       alt="Target figure" class="sort-image">
+{% endif %}
+
+<p class="footer-note" style="margin-bottom:4px;">
+  Drag the blocks into the correct order, then click <strong>Check Order</strong>.
+  Use the ▲▼ buttons if dragging is difficult.
+</p>
+
+<div class="sort-list" id="sort-list">
+  {% for item in line_items %}
+  <div class="sort-item" draggable="true" data-orig-idx="{{ item.orig_idx }}">
+    <div class="sort-arrows">
+      <button type="button" onclick="moveItem(this,-1)" title="Move up">▲</button>
+      <button type="button" onclick="moveItem(this,1)"  title="Move down">▼</button>
+    </div>
+    <span class="sort-handle" aria-hidden="true">⠿</span>
+    <pre>{{ item.text }}</pre>
+  </div>
+  {% endfor %}
+</div>
+
+<form method="post" action="{% url 'submit' slug=session.slug activity_id=activity.pk %}" id="order-form">
+  {% csrf_token %}
+  <div id="hidden-inputs"></div>
+  <div class="row">
+    <button type="submit">Check Order</button>
+    <button type="button" onclick="resetOrder()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);">Reset</button>
+  </div>
+</form>
+
+{% if progress.attempts > 0 %}
+<p class="footer-note mt-2">Attempts so far: {{ progress.attempts }}</p>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const list = document.getElementById('sort-list');
+  let dragSrc = null;
+
+  // Store the initial shuffled order so Reset can restore it
+  const initialOrder = [...list.querySelectorAll('.sort-item')];
+
+  function addDragListeners(item) {
+    item.addEventListener('dragstart', function (e) {
+      dragSrc = this;
+      setTimeout(() => this.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', function () {
+      this.classList.remove('dragging');
+      list.querySelectorAll('.sort-item').forEach(i => i.classList.remove('drag-over'));
+      dragSrc = null;
+    });
+    item.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      if (this !== dragSrc) {
+        list.querySelectorAll('.sort-item').forEach(i => i.classList.remove('drag-over'));
+        this.classList.add('drag-over');
+      }
+    });
+    item.addEventListener('dragleave', function () {
+      this.classList.remove('drag-over');
+    });
+    item.addEventListener('drop', function (e) {
+      e.preventDefault();
+      if (!dragSrc || this === dragSrc) return;
+      const items = [...list.querySelectorAll('.sort-item')];
+      const srcIdx = items.indexOf(dragSrc);
+      const tgtIdx = items.indexOf(this);
+      if (srcIdx < tgtIdx) {
+        list.insertBefore(dragSrc, this.nextSibling);
+      } else {
+        list.insertBefore(dragSrc, this);
+      }
+    });
+  }
+
+  list.querySelectorAll('.sort-item').forEach(addDragListeners);
+
+  // Arrow button reordering
+  window.moveItem = function (btn, dir) {
+    const item = btn.closest('.sort-item');
+    if (dir < 0 && item.previousElementSibling) {
+      list.insertBefore(item, item.previousElementSibling);
+    } else if (dir > 0 && item.nextElementSibling) {
+      list.insertBefore(item.nextElementSibling, item);
+    }
+  };
+
+  // Reset to initial shuffled order
+  window.resetOrder = function () {
+    initialOrder.forEach(item => list.appendChild(item));
+  };
+
+  // On submit: collect current orig-idx order into hidden inputs
+  document.getElementById('order-form').addEventListener('submit', function () {
+    const container = document.getElementById('hidden-inputs');
+    container.innerHTML = '';
+    list.querySelectorAll('.sort-item').forEach(function (item) {
+      const inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = 'order';
+      inp.value = item.dataset.origIdx;
+      container.appendChild(inp);
+    });
+  });
+})();
+</script>
+{% endblock %}

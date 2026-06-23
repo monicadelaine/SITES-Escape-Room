@@ -1,0 +1,328 @@
+{% extends "escaperoom/base.html" %}
+{% block title %}Door {{ activity.order }} — {{ activity.title }}{% endblock %}
+
+{% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Technique bank ── */
+  .technique-bank {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px;
+    background: var(--surface);
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    min-height: 52px;
+  }
+
+  .technique-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    background: var(--rose);
+    color: #fff;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: grab;
+    user-select: none;
+    transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 2px 4px rgba(0,0,0,.25);
+  }
+  .technique-chip:active  { cursor: grabbing; }
+  .technique-chip.dragging { opacity: 0.35; }
+  .technique-chip.selected { outline: 3px solid var(--amber); outline-offset: 2px; transform: scale(1.05); }
+
+  /* ── Match table ── */
+  .match-table { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+
+  .match-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+  }
+  .match-row.row-correct { border-color: #22c55e; background: color-mix(in srgb, #22c55e 8%, var(--surface)); }
+  .match-row.row-wrong   { border-color: var(--rose); background: color-mix(in srgb, var(--rose) 8%, var(--surface)); }
+  .match-row.drag-over   { border-color: var(--violet); background: color-mix(in srgb, var(--violet) 10%, var(--surface)); }
+
+  .match-scenario {
+    font-size: 0.95rem;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  .match-slot {
+    min-width: 140px;
+    min-height: 38px;
+    border: 2px dashed var(--border);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 2px 6px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .match-slot:empty::before {
+    content: "drop here";
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .match-slot.drag-over { border-color: var(--violet); border-style: solid; }
+
+  .match-slot .technique-chip { cursor: pointer; }
+
+  /* ── Row status icons ── */
+  .row-icon { font-size: 1.1rem; margin-left: 6px; }
+
+  /* ── Warning ── */
+  #fill-warning { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="eyebrow" style="--accent:var(--rose);">Door {{ activity.order }} — Security</div>
+<h2>{{ activity.title }}</h2>
+
+{% if last_result and last_result.activity_id == activity.pk %}
+  {% if last_result.passed %}
+    <div class="result pass">{{ last_result.detail }}</div>
+  {% else %}
+    <div class="result fail">{{ last_result.detail }}</div>
+  {% endif %}
+{% endif %}
+
+{% if rate_limited %}
+  <div class="result fail">
+    Please wait {% if attempt_delay > 2 %}{{ attempt_delay }} seconds{% else %}a moment{% endif %} before trying again.
+  </div>
+{% endif %}
+
+{% if description %}
+  <p style="margin-bottom:14px;line-height:1.5;">{{ description }}</p>
+{% endif %}
+
+<p class="footer-note" style="margin-bottom:8px;">
+  Drag a technique onto each scenario, or click a technique then click the row to place it.
+</p>
+
+<div class="technique-bank" id="technique-bank">
+  {% for tech in techniques %}
+  <div class="technique-chip" draggable="true" data-technique="{{ tech }}">{{ tech }}</div>
+  {% endfor %}
+</div>
+
+<div class="match-table" id="match-table">
+  {% for item in scenario_items %}
+  <div class="match-row" data-scenario-idx="{{ item.idx }}">
+    <div class="match-scenario">"{{ item.scenario }}"</div>
+    <div class="match-slot" data-scenario-idx="{{ item.idx }}"></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="result fail" id="fill-warning">Please match all scenarios before checking.</div>
+
+<form method="post" action="{% url 'submit' slug=session.slug activity_id=activity.pk %}" id="match-form">
+  {% csrf_token %}
+  <input type="hidden" name="match_answer" id="match-input">
+  <button type="submit" id="check-btn">Check Answers</button>
+</form>
+
+{% if progress.attempts > 0 %}
+<p class="footer-note mt-2">Attempts so far: {{ progress.attempts }}</p>
+{% endif %}
+
+{# Embed last_result data for JS to use #}
+{% if last_result and last_result.slot_results %}
+  {{ last_result.slot_results|json_script:"slot-results-data" }}
+{% endif %}
+{% if last_result and last_result.last_match %}
+  {{ last_result.last_match|json_script:"last-match-data" }}
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const bank    = document.getElementById('technique-bank');
+  const table   = document.getElementById('match-table');
+  const form    = document.getElementById('match-form');
+  const warning = document.getElementById('fill-warning');
+
+  let dragChip    = null;   // chip currently being dragged
+  let dragOrigin  = null;   // bank | slot element
+  let selectedChip = null;  // chip selected via click
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function returnToBank(chip) {
+    chip.classList.remove('selected', 'dragging');
+    bank.appendChild(chip);
+  }
+
+  function placeChip(chip, slot) {
+    const existing = slot.querySelector('.technique-chip');
+    if (existing && existing !== chip) returnToBank(existing);
+    chip.classList.remove('selected', 'dragging');
+    slot.appendChild(chip);
+    // If chip came from another slot, that slot is now empty — nothing to do
+  }
+
+  function setSelected(chip) {
+    if (selectedChip) selectedChip.classList.remove('selected');
+    selectedChip = (selectedChip === chip) ? null : chip;
+    if (selectedChip) selectedChip.classList.add('selected');
+  }
+
+  // ── Drag listeners ─────────────────────────────────────────────────────────
+
+  function bindChipDrag(chip) {
+    chip.addEventListener('dragstart', function (e) {
+      dragChip   = this;
+      dragOrigin = this.parentNode;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => this.classList.add('dragging'), 0);
+    });
+    chip.addEventListener('dragend', function () {
+      this.classList.remove('dragging');
+      dragChip = dragOrigin = null;
+    });
+  }
+
+  function bindSlotDrop(slot) {
+    slot.addEventListener('dragover', function (e) {
+      if (!dragChip) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      this.classList.add('drag-over');
+    });
+    slot.addEventListener('dragleave', function () {
+      this.classList.remove('drag-over');
+    });
+    slot.addEventListener('drop', function (e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      if (dragChip) placeChip(dragChip, this);
+    });
+  }
+
+  // Bank also accepts drops (return chip from slot)
+  bank.addEventListener('dragover', function (e) {
+    if (dragChip) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+  });
+  bank.addEventListener('drop', function (e) {
+    e.preventDefault();
+    if (dragChip) returnToBank(dragChip);
+  });
+
+  // ── Click listeners ─────────────────────────────────────────────────────────
+
+  function bindChipClick(chip) {
+    chip.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setSelected(this);
+    });
+  }
+
+  table.querySelectorAll('.match-slot').forEach(function (slot) {
+    bindSlotDrop(slot);
+
+    slot.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const existingChip = this.querySelector('.technique-chip');
+
+      if (selectedChip) {
+        // Place selected chip here
+        placeChip(selectedChip, this);
+        selectedChip = null;
+      } else if (existingChip) {
+        // Pick up the chip in this slot
+        setSelected(existingChip);
+      }
+    });
+  });
+
+  // Bind all chips (bank chips on load; slot chips added dynamically via event delegation)
+  bank.querySelectorAll('.technique-chip').forEach(function (chip) {
+    bindChipDrag(chip);
+    bindChipClick(chip);
+  });
+
+  // Click on match-row also acts as clicking its slot
+  table.querySelectorAll('.match-row').forEach(function (row) {
+    row.addEventListener('click', function () {
+      const slot = this.querySelector('.match-slot');
+      if (selectedChip) { placeChip(selectedChip, slot); selectedChip = null; }
+    });
+  });
+
+  // Deselect on background click
+  document.addEventListener('click', function () {
+    if (selectedChip) setSelected(null);
+  });
+
+  // ── Pre-fill previous answers (after a wrong attempt) ──────────────────────
+  const lastMatchEl = document.getElementById('last-match-data');
+  if (lastMatchEl) {
+    try {
+      const lastMatch = JSON.parse(lastMatchEl.textContent);
+      Object.entries(lastMatch).forEach(function ([scenarioIdx, technique]) {
+        if (!technique) return;
+        const slot = table.querySelector(`.match-slot[data-scenario-idx="${scenarioIdx}"]`);
+        const chip = bank.querySelector(`.technique-chip[data-technique="${technique}"]`);
+        if (slot && chip) {
+          bindChipDrag(chip);
+          bindChipClick(chip);
+          slot.appendChild(chip);
+        }
+      });
+    } catch (e) {}
+  }
+
+  // ── Apply row correct/wrong colours from last result ───────────────────────
+  const slotResultsEl = document.getElementById('slot-results-data');
+  if (slotResultsEl) {
+    try {
+      const slotResults = JSON.parse(slotResultsEl.textContent);
+      table.querySelectorAll('.match-row').forEach(function (row) {
+        const idx = row.dataset.scenarioIdx;
+        if (slotResults[idx] === true)  row.classList.add('row-correct');
+        if (slotResults[idx] === false) row.classList.add('row-wrong');
+      });
+    } catch (e) {}
+  }
+
+  // ── Submit: serialize current matches into hidden input ─────────────────────
+  form.addEventListener('submit', function (e) {
+    const assignments = {};
+    let allFilled = true;
+
+    table.querySelectorAll('.match-slot').forEach(function (slot) {
+      const chip = slot.querySelector('.technique-chip');
+      const idx  = slot.dataset.scenarioIdx;
+      assignments[idx] = chip ? chip.dataset.technique : '';
+      if (!chip) allFilled = false;
+    });
+
+    if (!allFilled) {
+      e.preventDefault();
+      warning.style.display = 'block';
+      return;
+    }
+    warning.style.display = 'none';
+    document.getElementById('match-input').value = JSON.stringify(assignments);
+  });
+
+})();
+</script>
+{% endblock %}

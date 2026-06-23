@@ -1,0 +1,37 @@
+{% extends "escaperoom/base.html" %}
+{% block title %}Waiting — {{ team.name }}{% endblock %}
+
+{% block content %}
+<div class="eyebrow">Almost There</div>
+<h2 style="text-align:center;">Get ready, {{ team.name }}</h2>
+<div class="clock-label">Doors unlock in</div>
+<div class="big-clock" id="wait-countdown">--:--</div>
+<p class="footer-note" style="text-align:center;">
+  This updates on its own — no need to refresh.<br>
+  Door 1 opens the moment it hits zero.
+</p>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+var startTime = new Date("{{ start_time_iso }}");
+
+function fmt(s) {
+  if (s < 0) s = 0;
+  var m = Math.floor(s / 60), sec = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function tick() {
+  var remaining = Math.floor((startTime - new Date()) / 1000);
+  document.getElementById('wait-countdown').textContent = fmt(remaining);
+  if (remaining <= 0) {
+    // Auto-reload into the play view
+    window.location.reload();
+  }
+}
+
+tick();
+setInterval(tick, 1000);
+</script>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "escaperoom/base.html" %}
+{% block title %}{{ team.name }} / {{ activity.title }} — Admin{% endblock %}
+{% block page_wrap_class %} wide{% endblock %}
+
+{% block content %}
+<div class="staff-flag">Staff-Only · {{ session.name }}</div>
+
+<p style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim);">
+  <a href="{% url 'manage' slug=session.slug %}" style="color:var(--accent);">← Back to Admin</a>
+</p>
+
+<h2>{{ team.name }} — {{ activity.title }}</h2>
+
+{# ---- Progress summary ---- #}
+<div style="background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:18px; font-family:'IBM Plex Mono',monospace; font-size:13px;">
+  <div>Status: <strong>{{ progress.status }}</strong></div>
+  <div>Attempts: <strong>{{ progress.attempts }}</strong></div>
+  {% if progress.started_at %}<div>Started: {{ progress.started_at|date:"H:i:s" }}</div>{% endif %}
+  {% if progress.completed_at %}<div>Completed: {{ progress.completed_at|date:"H:i:s" }}</div>{% endif %}
+  {# Show the effective secret for LLM activities #}
+  {% if activity.grader_type == 'secret_match' %}
+  <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line);">
+    Secret (this team): <strong style="color:var(--amber);">{{ effective_cfg.secret }}</strong>
+  </div>
+  {% endif %}
+  {# Show effective shift + plaintext for cipher activities #}
+  {% if activity.grader_type == 'decode_compare' %}
+  <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line);">
+    Shift: <strong style="color:var(--amber);">{{ effective_cfg.shift }}</strong>
+    &nbsp;·&nbsp; Plaintext: <em>{{ effective_cfg.plaintext }}</em>
+  </div>
+  {% endif %}
+</div>
+
+{# ---- Accept & Advance ---- #}
+{% if progress.status != 'completed' %}
+<form method="post" action="{% url 'manage_accept' slug=session.slug team_id=team.pk activity_id=activity.pk %}"
+      style="margin-bottom:8px;"
+      onsubmit="return confirm('Mark this door as completed for {{ team.name }}?');">
+  {% csrf_token %}
+  <button type="submit">Accept &amp; Advance</button>
+</form>
+{% endif %}
+
+{# ---- Advance To (testing helper) ---- #}
+<details style="margin-bottom:16px;">
+  <summary style="font-family:'IBM Plex Mono',monospace; font-size:12px; cursor:pointer; color:var(--text-dim);">
+    Testing: Jump {{ team.name }} directly to this door
+  </summary>
+  <p style="font-size:12px; color:var(--text-dim); margin:6px 0;">
+    Marks all earlier doors as complete and unlocks this one — useful for testing without playing through the whole sequence.
+  </p>
+  <form method="post" action="{% url 'manage_advance_to' slug=session.slug team_id=team.pk activity_id=activity.pk %}"
+        onsubmit="return confirm('Advance {{ team.name }} to Door {{ activity.order }}? This marks all earlier doors as completed.');">
+    {% csrf_token %}
+    <button type="submit" class="ghost">Jump to Door {{ activity.order }}</button>
+  </form>
+</details>
+
+{# ---- Regenerate puzzle ---- #}
+{% if activity.grader_type == 'decode_compare' or activity.grader_type == 'secret_match' %}
+<details style="margin-bottom:20px;">
+  <summary style="font-family:'IBM Plex Mono',monospace; font-size:13px; cursor:pointer; color:var(--text-dim); margin-bottom:8px;">
+    Regenerate Puzzle
+  </summary>
+  <form method="post" action="{% url 'manage_regenerate' slug=session.slug team_id=team.pk activity_id=activity.pk %}"
+        style="margin-top:10px;">
+    {% csrf_token %}
+    {% if activity.grader_type == 'decode_compare' %}
+    <div class="row">
+      <button type="submit" name="regen_type" value="new_shift" class="ghost">New Random Shift</button>
+      <button type="submit" name="regen_type" value="new_plaintext" class="ghost">New Message (from pool)</button>
+    </div>
+    <label style="margin-top:6px;">
+      <input type="checkbox" name="reset_attempts"> Also reset attempt counter
+    </label>
+    {% else %}
+    <button type="submit" name="regen_type" value="new_secret" class="ghost">New Secret (from pool)</button>
+    {% endif %}
+  </form>
+</details>
+{% endif %}
+
+{# ---- Attempt log ---- #}
+<h3 style="font-family:'IBM Plex Mono',monospace; font-size:15px; margin-bottom:10px;">Attempt Log</h3>
+{% if attempts %}
+{% for log in attempts %}
+<div class="attempt-row">
+  <span class="pending">{{ log.submitted_at|date:"H:i:s" }}</span>
+  &nbsp;
+  {% if log.passed == True %}
+    <span class="pass">PASS</span>
+  {% elif log.passed == False %}
+    <span class="fail">FAIL</span>
+  {% else %}
+    <span class="pending">PENDING</span>
+  {% endif %}
+  {% if log.manual_override %}<span style="color:var(--violet); font-size:11px;"> [override{% if log.staff_user %} by {{ log.staff_user.username }}{% endif %}]</span>{% endif %}
+  <br>
+  <span style="color:var(--text-dim); font-size:11px;">Payload:</span> <code>{{ log.payload|truncatechars:120 }}</code>
+  {% if log.detail %}
+  <br><span style="color:var(--text-dim); font-size:11px;">Detail:</span> {{ log.detail|truncatechars:200 }}
+  {% endif %}
+  {% if log.error_trace %}
+  <details style="margin-top:4px;">
+    <summary style="font-size:11px; color:var(--bad); cursor:pointer;">Grader error (click to expand)</summary>
+    <pre style="font-size:11px; color:var(--bad); white-space:pre-wrap; margin-top:4px;">{{ log.error_trace }}</pre>
+  </details>
+  {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<p class="footer-note">No attempts yet.</p>
+{% endif %}
+
+{# ---- LLM Chat Transcript ---- #}
+{% if chat_messages is not None %}
+<hr>
+<h3 style="font-family:'IBM Plex Mono',monospace; font-size:15px; margin-bottom:10px;">Chat Transcript</h3>
+{% if chat_messages %}
+<div style="background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:14px; max-height:400px; overflow-y:auto;">
+{% for msg in chat_messages %}
+<div style="margin-bottom:10px; {% if msg.blocked %}opacity:.5;{% endif %}">
+  <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim);">
+    {{ msg.created_at|date:"H:i:s" }} [{{ msg.role }}{% if msg.blocked %} BLOCKED{% endif %}]
+  </span>
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; margin-top:3px;">{{ msg.content }}</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<p class="footer-note">No chat messages yet.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

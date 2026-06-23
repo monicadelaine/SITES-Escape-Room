@@ -1,0 +1,170 @@
+{% extends "escaperoom/base.html" %}
+{% block title %}Admin — {{ session.name }}{% endblock %}
+{% block page_wrap_class %} wide{% endblock %}
+
+{% block content %}
+<div class="staff-flag">Staff-Only · Login Required</div>
+<div class="eyebrow">Admin View</div>
+<h2>{{ session.name }}</h2>
+
+{# ---- Time Controls ---- #}
+<div style="background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:20px;">
+
+  {# Current time + end time display #}
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:16px;">
+    <div>
+      <div class="footer-note" style="margin-bottom:3px;">Current time (Central)</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:700; color:var(--teal);" id="live-clock">
+        {{ now_central|date:"g:i:s A" }} CT
+      </div>
+    </div>
+    <div>
+      <div class="footer-note" style="margin-bottom:3px;">Session ends at</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:700; color:var(--amber);" id="end-time-display">
+        {% if end_time_display %}{{ end_time_display }}{% else %}— not set —{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Quick extend buttons #}
+  <div class="footer-note" style="margin-bottom:8px;">Quick extend:</div>
+  <div class="row" style="margin-bottom:14px;">
+    <button class="ghost" onclick="extendTime(5)">+5 min</button>
+    <button class="ghost" onclick="extendTime(10)">+10 min</button>
+    <button class="ghost" onclick="extendTime(15)">+15 min</button>
+  </div>
+
+  {# Direct time setter #}
+  <div class="footer-note" style="margin-bottom:8px;">Set end time directly (Central):</div>
+  <div class="row" style="margin-bottom:0;">
+    <input type="datetime-local" id="end-time-input" value="{{ end_time_input_value }}"
+           style="max-width:220px; margin-bottom:0;">
+    <button onclick="setTime()">Set End Time</button>
+  </div>
+
+  <div id="time-log" class="result info" style="display:none; margin-top:12px;"></div>
+</div>
+
+{# ---- Mark Ended ---- #}
+{% if session.is_active %}
+<form method="post" action="{% url 'manage_end' slug=session.slug %}"
+      onsubmit="return confirm('End the session now? This enables participation certificates.');">
+  {% csrf_token %}
+  <button type="submit" class="danger" style="margin-bottom:20px;">Mark Session Ended</button>
+</form>
+{% else %}
+<div class="result fail" style="margin-bottom:20px;">Session has been ended.</div>
+{% endif %}
+
+{# ---- Team × Door Grid ---- #}
+<table class="grid">
+  <thead>
+    <tr>
+      <th style="text-align:left;">Team</th>
+      {% for act in activities %}
+      <th>{{ act.title|truncatechars:14 }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td class="team-name">{{ row.team_name }}</td>
+      {% for cell in row.cells %}
+      <td>
+        <a href="{% url 'manage_detail' slug=session.slug team_id=row.team_id activity_id=cell.activity_id %}"
+           class="cell {{ cell.status }}"
+           title="{{ cell.attempts }} attempt{{ cell.attempts|pluralize }}">
+          {% if cell.status == 'completed' %}✓
+          {% elif cell.status == 'in_progress' %}…
+          {% else %}·{% endif %}
+        </a>
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{# ---- Audit Log ---- #}
+{% if audit %}
+<hr>
+<h3 style="font-family:'IBM Plex Mono',monospace; font-size:15px; margin-bottom:12px;">Session Audit Log</h3>
+{% for entry in audit %}
+<div class="attempt-row">
+  <span class="pending">{{ entry.created_at|date:"g:i:s A" }} CT</span>
+  &nbsp;<strong>{{ entry.action }}</strong>
+  {% if entry.staff_user %} by {{ entry.staff_user.username }}{% endif %}
+  {% if entry.detail %} — {{ entry.detail }}{% endif %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+var csrfToken  = "{{ csrf_token }}";
+var extendUrl  = "{% url 'manage_extend' slug=session.slug %}";
+var setTimeUrl = "{% url 'manage_set_time' slug=session.slug %}";
+
+// ---- live clock (Central) ----
+function tickClock() {
+  var now = new Date();
+  // Convert to Central by using Intl
+  var opts = { hour: 'numeric', minute: '2-digit', second: '2-digit',
+               hour12: true, timeZone: 'America/Chicago' };
+  document.getElementById('live-clock').textContent =
+    now.toLocaleTimeString('en-US', opts) + ' CT';
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// ---- shared response handler ----
+function _handleTimeResponse(data) {
+  var log = document.getElementById('time-log');
+  log.style.display = 'block';
+  if (data.error) {
+    log.className = 'result fail';
+    log.textContent = data.error;
+    return;
+  }
+  log.className = 'result info';
+  log.textContent = data.detail || 'Updated.';
+  if (data.end_time_display) {
+    document.getElementById('end-time-display').textContent = data.end_time_display;
+  }
+  if (data.end_time_input_value) {
+    document.getElementById('end-time-input').value = data.end_time_input_value;
+  }
+}
+
+function _post(url, body) {
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': csrfToken,
+    },
+    body: body,
+  })
+  .then(function(r) { return r.json(); })
+  .then(_handleTimeResponse)
+  .catch(function() {
+    var log = document.getElementById('time-log');
+    log.style.display = 'block';
+    log.className = 'result fail';
+    log.textContent = 'Network error — try again.';
+  });
+}
+
+function extendTime(mins) {
+  _post(extendUrl, 'minutes=' + mins);
+}
+
+function setTime() {
+  var val = document.getElementById('end-time-input').value;
+  if (!val) { alert('Please pick a date and time first.'); return; }
+  _post(setTimeUrl, 'end_time=' + encodeURIComponent(val));
+}
+</script>
+{% endblock %}

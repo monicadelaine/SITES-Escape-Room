@@ -1,0 +1,54 @@
+{% extends "escaperoom/base.html" %}
+{% block title %}Door {{ activity.order }} — {{ activity.title }}{% endblock %}
+
+{% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
+
+{% block content %}
+<div class="eyebrow" style="--accent:var(--amber);">Door {{ activity.order }} — Python</div>
+<h2>{{ activity.title }}</h2>
+
+{% if last_result and last_result.activity_id == activity.pk %}
+  {% if last_result.passed %}
+    <div class="result pass">{{ last_result.detail }}</div>
+  {% else %}
+    <div class="result fail">{{ last_result.detail }}</div>
+  {% endif %}
+{% endif %}
+
+{% if rate_limited %}
+  <div class="result fail">Slow down — wait a moment before submitting again.</div>
+{% endif %}
+
+<p class="footer-note" style="margin-bottom:10px;">Fill in the missing line to complete the function.</p>
+
+<pre class="code-block" id="code-display">{{ code_before }}<span class="blank-line" id="blank-display">{{ last_answer|default:"___" }}</span>{{ code_after }}</pre>
+
+<form method="post" action="{% url 'submit' slug=session.slug activity_id=activity.pk %}" id="py-form">
+  {% csrf_token %}
+  <label for="blank_answer">Your answer for the blank line:</label>
+  <div class="row">
+    <input type="text" id="blank_answer" name="blank_answer"
+           placeholder="e.g. largest = n"
+           value="{{ last_answer|default:'' }}"
+           autocomplete="off" spellcheck="false" required>
+    <button type="submit">Test My Code</button>
+  </div>
+  <p class="footer-note">Tip: use 4 spaces for indentation inside the if-block.</p>
+</form>
+
+{% if progress.attempts > 0 %}
+<p class="footer-note mt-2">Attempts so far: {{ progress.attempts }}</p>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+var inp = document.getElementById('blank_answer');
+var disp = document.getElementById('blank-display');
+if (inp && disp) {
+  inp.addEventListener('input', function() {
+    disp.textContent = inp.value || '___';
+  });
+}
+</script>
+{% endblock %}

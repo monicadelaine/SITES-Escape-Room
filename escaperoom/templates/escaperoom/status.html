@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Status — {{ session.name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+{% load static %}
+<link rel="stylesheet" href="{% static 'escaperoom/style.css' %}">
+<script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
+</head>
+<body>
+<div class="page-wrap wide">
+
+  <div class="topbar">
+    <h1 class="brand">{{ session.name }} &nbsp;·&nbsp; <span>Live Status</span></h1>
+    <div class="theme-toggle">
+      <button id="btn-dark" onclick="setTheme('dark')">Dark</button>
+      <button id="btn-light" onclick="setTheme('light')">Light</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      {% if end_time_iso %}
+      <div class="status-banner">
+        <div>
+          <div class="clock-label" style="text-align:left;">Time Remaining</div>
+          <div class="status-clock" id="countdown">--:--</div>
+        </div>
+        <div class="footer-note" style="margin:0; text-align:right;">
+          Updates every few seconds<br>on its own.
+        </div>
+      </div>
+      {% endif %}
+
+      <table class="grid" id="status-grid">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Team</th>
+            {% for act in activities %}
+            <th>{{ act.title|truncatechars:14 }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr data-team="{{ row.team_id }}">
+            <td class="team-name">{{ row.team_name }}</td>
+            {% for cell in row.cells %}
+            <td data-activity="{{ cell.activity_id }}">
+              <span class="cell {{ cell.status }}" title="{{ cell.attempts }} attempt{{ cell.attempts|pluralize }}">
+                {% if cell.status == 'completed' %}✓
+                {% elif cell.status == 'in_progress' %}…
+                {% else %}·{% endif %}
+              </span>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var endTimeISO = {{ end_time_iso|default:"null"|safe }};
+var statusJsonUrl = "{% url 'status_json' slug=session.slug %}";
+
+function setTheme(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  localStorage.setItem('theme', mode);
+  document.getElementById('btn-dark').classList.toggle('active', mode === 'dark');
+  document.getElementById('btn-light').classList.toggle('active', mode === 'light');
+}
+(function(){
+  var t = document.documentElement.getAttribute('data-theme') || 'dark';
+  document.getElementById('btn-dark').classList.toggle('active', t === 'dark');
+  document.getElementById('btn-light').classList.toggle('active', t === 'light');
+})();
+
+function fmt(s) {
+  if (s < 0) s = 0;
+  var m = Math.floor(s / 60), sec = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function updateCountdown() {
+  if (!endTimeISO) return;
+  var remaining = Math.floor((new Date(endTimeISO) - new Date()) / 1000);
+  var el = document.getElementById('countdown');
+  if (el) el.textContent = remaining > 0 ? fmt(remaining) : '00:00';
+}
+
+function repaintGrid(teams) {
+  teams.forEach(function(row) {
+    var tr = document.querySelector('tr[data-team="' + row.team_id + '"]');
+    if (!tr) return;
+    row.cells.forEach(function(cell) {
+      var td = tr.querySelector('td[data-activity="' + cell.activity_id + '"]');
+      if (!td) return;
+      var span = td.querySelector('.cell');
+      if (!span) return;
+      span.className = 'cell ' + cell.status;
+      span.title = cell.attempts + ' attempt' + (cell.attempts !== 1 ? 's' : '');
+      span.textContent = cell.status === 'completed' ? '✓' : cell.status === 'in_progress' ? '…' : '·';
+    });
+  });
+}
+
+function poll() {
+  fetch(statusJsonUrl)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.end_time) {
+        endTimeISO = data.end_time;
+      }
+      repaintGrid(data.teams);
+      updateCountdown();
+    })
+    .catch(function() {});
+}
+
+// Poll every 4 seconds
+poll();
+setInterval(poll, 4000);
+
+// Update countdown every second independently
+setInterval(updateCountdown, 1000);
+updateCountdown();
+
+// Pre-wrap end_time for JSON embedding
+{% if end_time_iso %}
+endTimeISO = "{{ end_time_iso }}";
+{% endif %}
+</script>
+</body>
+</html>

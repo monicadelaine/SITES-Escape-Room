@@ -1,0 +1,27 @@
+{% extends "escaperoom/base.html" %}
+{% block title %}Time's Up — {{ team.name }}{% endblock %}
+
+{% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
+
+{% block content %}
+<div class="complete-wrap">
+  <div class="eyebrow" style="text-align:center;">Session Ended</div>
+  <h2 style="text-align:center;">Time's up, {{ team.name }}</h2>
+  <p class="footer-note" style="margin-bottom:18px; text-align:center;">
+    You completed {{ completed_count }} of {{ total }} doors. Nice effort!
+  </p>
+
+  <ul class="door-list">
+    {% for row in activity_rows %}
+    <li class="{% if row.status == 'completed' %}done{% else %}pending{% endif %}">
+      {% if row.status == 'completed' %}✓{% else %}·{% endif %}
+      Door {{ row.activity.order }} — {{ row.activity.title }}
+    </li>
+    {% endfor %}
+  </ul>
+
+  <div style="text-align:center; margin-top:18px;">
+    <a href="{% url 'certificate' slug=session.slug %}" class="btn">Download Certificate (Participation)</a>
+  </div>
+</div>
+{% endblock %}

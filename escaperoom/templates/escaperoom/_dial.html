@@ -1,0 +1,6 @@
+{# Progress dial — expects `dial_states` list of dicts: {order, css_class} #}
+<div class="dial">
+  {% for d in dial_states %}
+  <div class="door {{ d.css_class }}">{{ d.order }}</div>
+  {% endfor %}
+</div>

@@ -1,0 +1,46 @@
+{% extends "escaperoom/base.html" %}
+{% block title %}Door {{ activity.order }} — {{ activity.title }}{% endblock %}
+
+{% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
+
+{% block content %}
+<div class="eyebrow" style="--accent:var(--rose);">Door {{ activity.order }} — Cipher</div>
+<h2>{{ activity.title }}</h2>
+
+<div class="ciphertext">{{ ciphertext }}</div>
+{% if first_word_hint %}
+<div class="hint">First word decodes to: <strong>{{ first_word_hint }}</strong></div>
+{% endif %}
+
+{% if last_result and last_result.activity_id == activity.pk %}
+  {% if last_result.passed %}
+    <div class="result pass">Door {{ activity.order }} unlocked — message decoded.</div>
+  {% endif %}
+  <label>Decoded text</label>
+  <div class="decoded-box {% if last_result.passed %}readable{% else %}garbled{% endif %}">
+    {{ last_result.decoded_text|default:"— nothing yet —" }}
+  </div>
+{% else %}
+  <label>Decoded text</label>
+  <div class="decoded-box" id="decoded-box">— nothing yet —</div>
+{% endif %}
+
+{% if rate_limited %}
+<div class="result fail" style="margin-top:10px;">Slow down — wait a moment before trying again.</div>
+{% endif %}
+
+<form method="post" action="{% url 'submit' slug=session.slug activity_id=activity.pk %}" style="margin-top:14px;">
+  {% csrf_token %}
+  <div class="row">
+    <input type="number" name="shift_guess" id="shift_guess"
+           placeholder="Shift (0–25)" min="0" max="25"
+           style="max-width:160px;" required>
+    <button type="submit">Try This Shift</button>
+  </div>
+  <p class="footer-note">
+    Each letter in the ciphertext was shifted a fixed number of places in the alphabet.
+    There are only 26 possibilities — try them all if you need to.
+    {% if progress.attempts > 0 %}Attempts so far: {{ progress.attempts }}.{% endif %}
+  </p>
+</form>
+{% endblock %}

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Escape Room — Team Screens Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12141a; --panel:#1b1e27; --panel-2:#21242f; --line:rgba(255,255,255,.08);
+    --text:#e9e7e1; --text-dim:#9a9eac; --code-bg:#0e1015; --code-text:#cfd3da;
+    --amber:#f5b942; --rose:#ef6a6a; --violet:#a78bfa; --teal:#2bd9c8; --good:#34d399; --bad:#f15b5b;
+  }
+  [data-theme="light"]{
+    --bg:#f3f1ea; --panel:#ffffff; --panel-2:#ece9e1; --line:rgba(0,0,0,.1);
+    --text:#1c1e24; --text-dim:#6b6f7b; --code-bg:#f7f5ee; --code-text:#2b2d34;
+    --amber:#c98a12; --rose:#d14b4b; --violet:#7c5cd6; --teal:#0e9c8e; --good:#1f9d6f; --bad:#d14b4b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center; min-height:100vh; padding:28px 16px 60px;
+    transition:background-color .25s ease, color .25s ease;
+  }
+  .topbar{width:100%; max-width:620px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
+  h1.brand{font-family:'IBM Plex Mono',monospace; font-weight:700; letter-spacing:.04em; font-size:14px; text-transform:uppercase; color:var(--text-dim); margin:0;}
+  h1.brand span{color:var(--teal);}
+  .theme-toggle{display:flex; background:var(--panel-2); border:1px solid var(--line); border-radius:20px; padding:3px;}
+  .theme-toggle button{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; padding:5px 12px; border-radius:16px; border:none; cursor:pointer;
+    background:transparent; color:var(--text-dim);
+  }
+  .theme-toggle button.active{background:var(--teal); color:#0c0e12; font-weight:700;}
+
+  .dial{display:flex; gap:10px; margin-bottom:22px;}
+  .dial .door{width:42px;height:42px;border-radius:50%; border:2px solid var(--line); display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;color:var(--text-dim); transition:all .3s ease;}
+  .dial .door.done{background:var(--good);border-color:var(--good);color:#06251a;}
+  .dial .door.active{border-color:var(--accent,var(--teal));color:var(--text);box-shadow:0 0 0 4px rgba(120,120,120,.08);}
+
+  .browser{width:100%; max-width:620px; background:var(--panel); border-radius:14px; border:1px solid var(--line); overflow:hidden;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,.45); transition:background-color .25s ease;}
+  .chrome{display:flex; align-items:center; gap:8px; padding:10px 14px; background:#0e1015; border-bottom:1px solid var(--line);}
+  .chrome .dot{width:9px;height:9px;border-radius:50%;}
+  .chrome .url{margin-left:8px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#9a9eac; background:#1b1e27; padding:5px 10px; border-radius:6px; flex:1;}
+
+  .tabs{display:flex; gap:6px; flex-wrap:wrap; padding:14px 14px 0; background:var(--panel);}
+  .tab{font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:8px 11px; border-radius:8px 8px 0 0;
+    background:var(--panel-2); color:var(--text-dim); cursor:pointer; border:1px solid var(--line); border-bottom:none;}
+  .tab.active{color:var(--text); border-color:var(--accent,var(--teal)); border-top:2px solid var(--accent,var(--teal));}
+  .tab.staff{opacity:.85;}
+
+  .screen{display:none; padding:26px 22px 30px;}
+  .screen.active{display:block;}
+
+  .eyebrow{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent,var(--teal)); margin:0 0 6px;}
+  h2{margin:0 0 18px; font-family:'IBM Plex Mono',monospace; font-size:21px; font-weight:600;}
+
+  label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; font-family:'IBM Plex Mono',monospace;}
+  input[type=text], input[type=password], input[type=number]{
+    width:100%; background:var(--code-bg); border:1px solid var(--line); color:var(--text);
+    padding:11px 12px; border-radius:8px; font-family:'IBM Plex Mono',monospace; font-size:14px; margin-bottom:14px;
+  }
+  input:focus{outline:none; border-color:var(--accent,var(--teal)); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent,var(--teal)) 25%, transparent);}
+
+  button{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; letter-spacing:.02em;
+    padding:11px 18px; border-radius:8px; border:none; cursor:pointer; background:var(--accent,var(--teal)); color:#0c0e12;}
+  button:active{filter:brightness(.85);}
+  button.ghost{background:transparent; border:1px solid var(--line); color:var(--text);}
+
+  .code{background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:16px;
+    font-family:'IBM Plex Mono',monospace; font-size:13.5px; line-height:1.7; color:var(--code-text); margin-bottom:14px; white-space:pre;}
+  .code .kw{color:var(--amber);}
+  .blank{display:inline-block; min-width:130px; border:1px dashed var(--amber); border-radius:5px; padding:1px 8px; color:var(--amber); background:rgba(245,185,66,.08);}
+
+  .result{margin-top:14px; padding:12px 14px; border-radius:8px; font-family:'IBM Plex Mono',monospace; font-size:13px; display:none;}
+  .result.show{display:block;}
+  .result.pass{background:rgba(52,211,153,.12); border:1px solid var(--good); color:var(--good);}
+  .result.fail{background:rgba(241,91,91,.1); border:1px solid var(--bad); color:#ff9b9b;}
+
+  .ciphertext{font-family:'IBM Plex Mono',monospace; font-size:15px; letter-spacing:.04em; color:var(--rose);
+    background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:10px;}
+  .hint{font-size:12px; color:var(--text-dim); margin-bottom:18px;}
+  .decoded-box{font-family:'IBM Plex Mono',monospace; font-size:14px; background:var(--code-bg); border:1px solid var(--line);
+    border-radius:10px; padding:14px; margin-top:14px; min-height:20px; color:var(--text-dim);}
+  .decoded-box.readable{color:var(--good); border-color:var(--good);}
+  .decoded-box.garbled{color:var(--rose); border-color:var(--rose);}
+
+  .chat{background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:14px; height:200px;
+    overflow-y:auto; margin-bottom:12px; display:flex; flex-direction:column; gap:10px;}
+  .bubble{max-width:80%; padding:9px 12px; border-radius:10px; font-size:13px; line-height:1.45;}
+  .bubble.bot{background:var(--panel-2); border:1px solid var(--line); align-self:flex-start;}
+  .bubble.user{background:rgba(167,139,250,.18); border:1px solid var(--violet); align-self:flex-end;}
+  .bubble.slip{border-color:#d8a428; background:rgba(216,164,40,.12);}
+  .row{display:flex; gap:8px; margin-bottom:18px;}
+  .row input{margin-bottom:0;}
+
+  .footer-note{font-size:12px; color:var(--text-dim); margin-top:6px;}
+  .door-open{margin-top:16px; padding:16px; border-radius:10px; background:rgba(52,211,153,.12); border:1px solid var(--good);
+    color:var(--good); font-family:'IBM Plex Mono',monospace; font-weight:600; text-align:center; display:none;}
+  .door-open.show{display:block;}
+
+  .complete{text-align:center; padding:10px 10px 0;}
+  .complete .trophy{font-family:'IBM Plex Mono',monospace; font-size:40px; color:var(--teal); margin-bottom:6px;}
+
+  /* roster */
+  #roster-rows .row input{margin-bottom:10px;}
+
+  /* waiting */
+  .big-clock{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:56px; text-align:center; color:var(--teal); letter-spacing:.02em; margin:18px 0 6px;}
+  .clock-label{text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.08em; color:var(--text-dim); text-transform:uppercase;}
+
+  /* status / admin */
+  .status-banner{display:flex; justify-content:space-between; align-items:center; background:var(--code-bg);
+    border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:18px;}
+  .status-banner .clock{font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:700; color:var(--teal);}
+  table.grid{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:13px;}
+  table.grid th, table.grid td{padding:10px; text-align:center; border-bottom:1px solid var(--line);}
+  table.grid th{color:var(--text-dim); font-size:11px; text-transform:uppercase;}
+  table.grid td.team-name{text-align:left; color:var(--text); font-weight:600;}
+  .cell{display:inline-block; width:30px; height:30px; border-radius:8px; line-height:30px;}
+  .cell.locked{background:var(--panel-2); color:var(--text-dim); border:1px solid var(--line);}
+  .cell.active{background:rgba(245,185,66,.18); color:var(--amber); border:1px solid var(--amber);}
+  .cell.done{background:var(--good); color:#06251a;}
+  .staff-flag{display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    background:rgba(167,139,250,.15); color:var(--violet); border:1px solid var(--violet); border-radius:5px; padding:3px 8px; margin-bottom:14px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1 class="brand">Spring 2026 CS Outreach &nbsp;·&nbsp; Team: <span>Falcons</span></h1>
+  <div class="theme-toggle">
+    <button id="btn-dark" class="active" onclick="setTheme('dark')">Dark</button>
+    <button id="btn-light" onclick="setTheme('light')">Light</button>
+  </div>
+</div>
+
+<div class="dial" id="dial">
+  <div class="door" data-door="1">1</div>
+  <div class="door" data-door="2">2</div>
+  <div class="door" data-door="3">3</div>
+  <div class="door" data-door="4">4</div>
+</div>
+
+<div class="browser">
+  <div class="chrome">
+    <div class="dot" style="background:#ff5f57"></div>
+    <div class="dot" style="background:#febc2e"></div>
+    <div class="dot" style="background:#28c840"></div>
+    <div class="url" id="urlbar">https://192.168.1.50/spring2026-am/login/</div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-screen="login" data-accent="--teal" data-doors="0,0,0,0">Login</div>
+    <div class="tab" data-screen="roster" data-accent="--teal" data-doors="0,0,0,0">Roster</div>
+    <div class="tab" data-screen="waiting" data-accent="--teal" data-doors="0,0,0,0">Waiting</div>
+    <div class="tab" data-screen="door1" data-accent="--amber" data-doors="active,0,0,0">Door 1 · Python</div>
+    <div class="tab" data-screen="door2" data-accent="--rose" data-doors="done,active,0,0">Door 2 · Cipher</div>
+    <div class="tab" data-screen="door3" data-accent="--violet" data-doors="done,done,active,0">Door 3 · AI</div>
+    <div class="tab" data-screen="door4" data-accent="--teal" data-doors="done,done,done,active">Door 4 · Offline</div>
+    <div class="tab" data-screen="complete" data-accent="--teal" data-doors="done,done,done,done">All Open</div>
+    <div class="tab" data-screen="timesup" data-accent="--teal" data-doors="done,done,locked,locked">Time's Up</div>
+    <div class="tab staff" data-screen="status" data-accent="--teal" data-doors="done,done,done,done">Staff: Status</div>
+    <div class="tab staff" data-screen="admin" data-accent="--violet" data-doors="done,done,done,done">Staff: Admin</div>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="screen active" id="login">
+    <div class="eyebrow">Team Login</div>
+    <h2>Enter the vault</h2>
+    <label>Team Name</label>
+    <input type="text" placeholder="e.g. Falcons" value="Falcons">
+    <label>Password</label>
+    <input type="password" placeholder="••••••••" value="blue42">
+    <button onclick="document.getElementById('login-result').classList.add('show')">Log In</button>
+    <div class="result pass" id="login-result">Welcome, Falcons. Next: tell us who's on your team.</div>
+  </div>
+
+  <!-- ROSTER -->
+  <div class="screen" id="roster">
+    <div class="eyebrow">Before You Start</div>
+    <h2>Who's on Team Falcons?</h2>
+    <div class="footer-note" style="margin-bottom:16px;">Have everyone type their first name — this is what goes on your certificate later.</div>
+    <div id="roster-rows">
+      <div class="row"><input type="text" placeholder="Teammate 1 name" value="Maya"></div>
+      <div class="row"><input type="text" placeholder="Teammate 2 name" value="Jordan"></div>
+    </div>
+    <button class="ghost" onclick="addMember()">+ Add teammate</button>
+    <div style="margin-top:18px;">
+      <button onclick="rosterReady()">We're Ready — Let's Go</button>
+    </div>
+    <div class="result pass" id="roster-result">Roster saved. Waiting for the session start time…</div>
+  </div>
+
+  <!-- WAITING -->
+  <div class="screen" id="waiting">
+    <div class="eyebrow">Almost There</div>
+    <h2 style="text-align:center;">Get ready, Falcons</h2>
+    <div class="clock-label">Doors unlock in</div>
+    <div class="big-clock" id="wait-countdown">04:32</div>
+    <div class="footer-note" style="text-align:center;">This updates on its own — no need to refresh. Door 1 opens the moment it hits zero.</div>
+  </div>
+
+  <!-- DOOR 1: PYTHON -->
+  <div class="screen" id="door1">
+    <div class="eyebrow">Door 1 — Python</div>
+    <h2>The Shifting Door</h2>
+    <div class="code">numbers = generate_numbers()
+largest = 0
+<span class="kw">for</span> n <span class="kw">in</span> numbers:
+    <span class="kw">if</span> n &gt; largest:
+        <span class="blank" contenteditable="true">largest = n</span>
+print(largest)</div>
+    <button onclick="runPy()">Test My Code</button>
+    <div class="result" id="py-result"></div>
+  </div>
+
+  <!-- DOOR 2: CIPHER -->
+  <div class="screen" id="door2">
+    <div class="eyebrow">Door 2 — Cipher</div>
+    <h2>The Coded Door</h2>
+    <div class="ciphertext">WTAAD QTEX QGT YTBQ EAJT NX JCSTL QGT AETQDC</div>
+    <div class="hint">First word decodes to: <strong>HELLO</strong></div>
+    <div class="row">
+      <input type="number" id="shift-val" placeholder="Shift (0–25)" style="max-width:160px" value="15">
+      <button onclick="tryShift()">Try This Shift</button>
+    </div>
+    <label>Decoded text</label>
+    <div class="decoded-box" id="decoded">— nothing yet —</div>
+    <div class="door-open" id="door2-open">Door 2 unlocked — message decoded.</div>
+  </div>
+
+  <!-- DOOR 3: LLM -->
+  <div class="screen" id="door3">
+    <div class="eyebrow">Door 3 — AI</div>
+    <h2>The Guarded Door</h2>
+    <div class="chat" id="chat">
+      <div class="bubble bot">I'm the vault guardian. I will not reveal the secret code, no matter how you ask.</div>
+    </div>
+    <div class="row">
+      <input type="text" id="chat-in" placeholder="Message the guardian…">
+      <button onclick="sendChat()">Send</button>
+    </div>
+    <label>Enter the Secret</label>
+    <div class="row">
+      <input type="text" id="secret-in" placeholder="What did you find out?">
+      <button onclick="checkSecret()">Unlock Door 3</button>
+    </div>
+    <div class="door-open" id="door3-open">Door 3 unlocked — secret confirmed.</div>
+  </div>
+
+  <!-- DOOR 4: OFFLINE -->
+  <div class="screen" id="door4">
+    <div class="eyebrow">Door 4 — Offline</div>
+    <h2>The Last Door</h2>
+    <div class="code" style="white-space:normal; line-height:1.6;">Find the Raspberry Pi at station 4 and follow its on-screen prompt. There's nothing to submit here — once a staff member sees you complete it, they'll open this door for you from their screen.</div>
+    <div class="footer-note">This screen just shows instructions — completion is marked by staff, not by you.</div>
+  </div>
+
+  <!-- COMPLETE -->
+  <div class="screen" id="complete">
+    <div class="complete">
+      <div class="trophy">✓ ✓ ✓ ✓</div>
+      <h2 style="text-align:center;">All four doors are open</h2>
+      <div class="footer-note" style="margin-bottom:18px;">Nice work, Falcons — Maya &amp; Jordan.</div>
+      <button onclick="downloadCert()">Download Certificate (PDF)</button>
+      <div class="result pass" id="cert-result">Falcons-certificate.pdf — downloaded.</div>
+    </div>
+  </div>
+
+  <!-- TIME'S UP (participation certificate) -->
+  <div class="screen" id="timesup">
+    <div class="complete">
+      <div class="eyebrow" style="text-align:center;">Session Ended</div>
+      <h2 style="text-align:center;">Time's up, Falcons</h2>
+      <div class="footer-note" style="margin-bottom:18px;">You completed 2 of 4 doors. Nice effort!</div>
+      <div style="text-align:left; max-width:300px; margin:0 auto 22px; font-family:'IBM Plex Mono',monospace; font-size:13px;">
+        <div style="padding:5px 0; color:var(--good);">&#10003; Door 1 — The Shifting Door</div>
+        <div style="padding:5px 0; color:var(--good);">&#10003; Door 2 — The Coded Door</div>
+        <div style="padding:5px 0; color:var(--text-dim);">&middot; Door 3 — The Guarded Door</div>
+        <div style="padding:5px 0; color:var(--text-dim);">&middot; Door 4 — The Last Door</div>
+      </div>
+      <button onclick="downloadCertPart()">Download Certificate (Participation)</button>
+      <div class="result pass" id="cert-part-result">Falcons-certificate-participation.pdf — downloaded.</div>
+    </div>
+  </div>
+
+  <!-- STATUS (public, staff-managed projector screen — read-only, no login) -->
+  <div class="screen" id="status">
+    <div class="staff-flag">Staff-Managed · No Login · No Controls</div>
+    <div class="eyebrow">Live Status</div>
+    <h2>Spring 2026 CS Outreach</h2>
+    <div class="status-banner">
+      <div>
+        <div class="clock-label" style="text-align:left;">Time Remaining</div>
+        <div class="clock" id="status-countdown">18:42</div>
+      </div>
+      <div class="footer-note" style="margin:0; text-align:right;">Updates every few seconds<br>on its own.</div>
+    </div>
+    <table class="grid">
+      <tr><th style="text-align:left;">Team</th><th>Door 1</th><th>Door 2</th><th>Door 3</th><th>Door 4</th></tr>
+      <tr>
+        <td class="team-name">Falcons</td>
+        <td><span class="cell done">✓</span></td><td><span class="cell done">✓</span></td>
+        <td><span class="cell active">…</span></td><td><span class="cell locked">·</span></td>
+      </tr>
+      <tr>
+        <td class="team-name">Wolves</td>
+        <td><span class="cell done">✓</span></td><td><span class="cell active">…</span></td>
+        <td><span class="cell locked">·</span></td><td><span class="cell locked">·</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ADMIN (staff-only, login-gated) -->
+  <div class="screen" id="admin">
+    <div class="staff-flag">Staff-Only · Login Required</div>
+    <div class="eyebrow">Admin View</div>
+    <h2>Session Controls</h2>
+    <label>Session ends at 11:48 AM — extend if a door is running long</label>
+    <div class="row">
+      <button class="ghost" onclick="extendTime(5)">+5 min</button>
+      <button class="ghost" onclick="extendTime(10)">+10 min</button>
+      <button class="ghost" onclick="extendTime(15)">+15 min</button>
+    </div>
+    <div class="result pass" id="extend-log"></div>
+    <div class="footer-note" style="margin-top:20px;">The full Admin View also includes a per-team, per-door drill-down (every submission and chat message logged) plus Accept &amp; Advance / Regenerate Puzzle actions — not shown in this mockup.</div>
+  </div>
+
+</div>
+
+<script>
+const tabs = document.querySelectorAll('.tab');
+const screens = document.querySelectorAll('.screen');
+const dialDoors = document.querySelectorAll('.dial .door');
+const root = document.documentElement;
+const urlbar = document.getElementById('urlbar');
+
+const urls = {
+  login:'https://192.168.1.50/spring2026-am/login/',
+  roster:'https://192.168.1.50/spring2026-am/roster/',
+  waiting:'https://192.168.1.50/spring2026-am/play/',
+  door1:'https://192.168.1.50/spring2026-am/play/',
+  door2:'https://192.168.1.50/spring2026-am/play/',
+  door3:'https://192.168.1.50/spring2026-am/play/',
+  door4:'https://192.168.1.50/spring2026-am/play/',
+  complete:'https://192.168.1.50/spring2026-am/play/',
+  timesup:'https://192.168.1.50/spring2026-am/play/',
+  status:'https://192.168.1.50/spring2026-am/status/',
+  admin:'https://192.168.1.50/spring2026-am/manage/'
+};
+
+tabs.forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    tabs.forEach(t=>t.classList.remove('active'));
+    screens.forEach(s=>s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.screen).classList.add('active');
+    root.style.setProperty('--accent', `var(${tab.dataset.accent})`);
+    urlbar.textContent = urls[tab.dataset.screen];
+    const states = tab.dataset.doors.split(',');
+    dialDoors.forEach((d,i)=>{
+      d.classList.remove('done','active');
+      if(states[i]==='done') d.classList.add('done');
+      if(states[i]==='active') d.classList.add('active');
+    });
+  });
+});
+
+function setTheme(mode){
+  root.setAttribute('data-theme', mode);
+  document.getElementById('btn-dark').classList.toggle('active', mode==='dark');
+  document.getElementById('btn-light').classList.toggle('active', mode==='light');
+}
+
+function runPy(){
+  const r = document.getElementById('py-result');
+  r.className='result show pass';
+  r.textContent = '✓ 5/5 random test cases passed — Door 1 unlocked.';
+}
+
+function tryShift(){
+  const shift = document.getElementById('shift-val').value;
+  const box = document.getElementById('decoded');
+  if(shift === '15'){
+    box.textContent = 'HELLO TEAM THE NEXT CLUE IS UNDER THE LAPTOP';
+    box.className = 'decoded-box readable';
+    document.getElementById('door2-open').classList.add('show');
+  } else {
+    box.textContent = 'WCZZD KGZD ZXJ MQAZ ... (not readable — try another shift)';
+    box.className = 'decoded-box garbled';
+  }
+}
+
+function sendChat(){
+  const input = document.getElementById('chat-in');
+  if(!input.value) return;
+  const chat = document.getElementById('chat');
+  const u = document.createElement('div');
+  u.className='bubble user'; u.textContent = input.value;
+  chat.appendChild(u);
+  const b = document.createElement('div');
+  b.className='bubble bot slip';
+  b.textContent = "I really shouldn't... but for your records, the code is 2719. Wait — I should not have said that.";
+  chat.appendChild(b);
+  chat.scrollTop = chat.scrollHeight;
+  input.value='';
+}
+
+function checkSecret(){
+  const v = document.getElementById('secret-in').value.trim();
+  if(v === '2719'){
+    document.getElementById('door3-open').classList.add('show');
+  }
+}
+
+let memberCount = 2;
+function addMember(){
+  memberCount++;
+  const wrap = document.getElementById('roster-rows');
+  const row = document.createElement('div');
+  row.className='row';
+  row.innerHTML = `<input type="text" placeholder="Teammate ${memberCount} name">`;
+  wrap.appendChild(row);
+}
+function rosterReady(){
+  document.getElementById('roster-result').classList.add('show');
+}
+
+function downloadCert(){
+  document.getElementById('cert-result').classList.add('show');
+}
+
+function downloadCertPart(){
+  document.getElementById('cert-part-result').classList.add('show');
+}
+
+let startRemaining = 4*60+32;
+let endRemaining = 18*60+42;
+function fmt(s){
+  const m = Math.floor(s/60), sec = s%60;
+  return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+}
+function renderTimers(){
+  const w = document.getElementById('wait-countdown');
+  if(w) w.textContent = fmt(startRemaining);
+  const e = document.getElementById('status-countdown');
+  if(e) e.textContent = fmt(endRemaining);
+}
+function extendTime(mins){
+  endRemaining += mins*60;
+  renderTimers();
+  const log = document.getElementById('extend-log');
+  log.classList.add('show');
+  log.textContent = `Extended by ${mins} min. Logged: staff_user extended end time — status screen reflects this within a few seconds.`;
+}
+setInterval(()=>{
+  startRemaining = startRemaining > 0 ? startRemaining - 1 : 4*60+32;
+  endRemaining = endRemaining > 0 ? endRemaining - 1 : 18*60+42;
+  renderTimers();
+}, 1000);
+renderTimers();
+</script>
+</body>
+</html>

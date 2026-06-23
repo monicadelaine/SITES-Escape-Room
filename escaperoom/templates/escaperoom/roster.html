@@ -1,0 +1,46 @@
+{% extends "escaperoom/base.html" %}
+{% block title %}Roster — {{ team.name }}{% endblock %}
+
+{% block content %}
+<div class="eyebrow">Before You Start</div>
+<h2>Who's on Team {{ team.name }}?</h2>
+<p class="footer-note" style="margin-bottom:16px;">Have everyone type their first name — this is what goes on your certificate later.</p>
+
+{% if already_done %}
+  <p class="result info">Roster locked in. Welcome, {{ team.members.all|join:", " }}!</p>
+  <ul style="font-family:'IBM Plex Mono',monospace; font-size:14px; padding-left:18px; color:var(--text);">
+    {% for m in members %}
+    <li>{{ m.name }}</li>
+    {% endfor %}
+  </ul>
+  <div style="margin-top:18px;">
+    <a href="{% url 'play' slug=session.slug %}" class="btn">Continue to Game</a>
+  </div>
+{% else %}
+  <form method="post" id="roster-form">
+    {% csrf_token %}
+    <div id="roster-rows">
+      <div class="row"><input type="text" name="name" placeholder="Teammate 1 name" required></div>
+    </div>
+    <button type="button" class="ghost" onclick="addMember()" style="margin-bottom:18px;">+ Add teammate</button>
+    <div>
+      <button type="submit">We're Ready — Let's Go</button>
+    </div>
+  </form>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+var memberCount = 1;
+function addMember() {
+  memberCount++;
+  var wrap = document.getElementById('roster-rows');
+  var row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = '<input type="text" name="name" placeholder="Teammate ' + memberCount + ' name">';
+  wrap.appendChild(row);
+  row.querySelector('input').focus();
+}
+</script>
+{% endblock %}

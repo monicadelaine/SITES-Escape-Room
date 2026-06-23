@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Certificate — {{ team.name }}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;600&display=swap');
+
+  body {
+    margin: 0;
+    padding: 60px 80px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: #fff;
+    color: #1c1e24;
+  }
+  .cert {
+    max-width: 700px;
+    margin: 0 auto;
+    border: 3px solid #2bd9c8;
+    border-radius: 16px;
+    padding: 60px 70px;
+    text-align: center;
+    position: relative;
+  }
+  .corner {
+    position: absolute;
+    font-size: 28px;
+    color: #2bd9c8;
+  }
+  .corner.tl { top: 18px; left: 22px; }
+  .corner.tr { top: 18px; right: 22px; }
+  .corner.bl { bottom: 18px; left: 22px; }
+  .corner.br { bottom: 18px; right: 22px; }
+
+  .label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #9a9eac;
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 36px;
+    font-weight: 700;
+    color: #12141a;
+    margin: 0 0 8px;
+  }
+  .event {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    color: #2bd9c8;
+    margin-bottom: 28px;
+  }
+  .team-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: #2bd9c8;
+    margin: 0 0 12px;
+  }
+  .members {
+    font-size: 15px;
+    color: #6b6f7b;
+    margin-bottom: 24px;
+  }
+  .achievement {
+    font-size: 17px;
+    color: #1c1e24;
+    margin-bottom: 30px;
+    line-height: 1.5;
+  }
+  .meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #9a9eac;
+    border-top: 1px solid #ece9e1;
+    padding-top: 18px;
+  }
+  .doors {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 0 0 28px;
+  }
+  .door-badge {
+    background: #34d399;
+    color: #06251a;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+<div class="cert">
+  <div class="corner tl">✦</div>
+  <div class="corner tr">✦</div>
+  <div class="corner bl">✦</div>
+  <div class="corner br">✦</div>
+
+  <div class="label">Certificate of Completion</div>
+  <h1>All Four Doors Opened</h1>
+  <div class="event">{{ session.name }}</div>
+
+  <div class="team-name">Team {{ team.name }}</div>
+  <div class="members">
+    {% for m in members %}{{ m.name }}{% if not forloop.last %} · {% endif %}{% endfor %}
+  </div>
+
+  <div class="achievement">
+    successfully completed all four challenges of the CS Escape Room,<br>
+    demonstrating skills in Python programming, cryptography, AI interaction,<br>
+    and collaborative problem solving.
+  </div>
+
+  <div class="doors">
+    {% for act in completed_activities %}
+    <div class="door-badge">✓ {{ act.title }}</div>
+    {% endfor %}
+  </div>
+
+  <div class="meta">
+    {{ completion_date }} &nbsp;·&nbsp; Time to complete: {{ elapsed }}
+  </div>
+</div>
+</body>
+</html>

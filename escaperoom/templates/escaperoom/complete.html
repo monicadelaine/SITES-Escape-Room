@@ -1,0 +1,20 @@
+{% extends "escaperoom/base.html" %}
+{% block title %}All Doors Open — {{ team.name }}{% endblock %}
+
+{% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
+
+{% block content %}
+<div class="complete-wrap">
+  <div class="trophy">✓ ✓ ✓ ✓</div>
+  <h2 style="text-align:center;">All four doors are open</h2>
+  <p class="footer-note" style="margin-bottom:18px; text-align:center;">
+    Nice work, {{ team.name }}
+    {% if members %} —
+      {% for m in members %}{{ m.name }}{% if not forloop.last %} &amp; {% endif %}{% endfor %}
+    {% endif %}.
+  </p>
+  <div style="text-align:center;">
+    <a href="{% url 'certificate' slug=session.slug %}" class="btn">Download Certificate (PDF)</a>
+  </div>
+</div>
+{% endblock %}

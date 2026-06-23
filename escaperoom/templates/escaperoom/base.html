@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}CS Escape Room{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+{% load static %}
+<link rel="stylesheet" href="{% static 'escaperoom/style.css' %}">
+{# Inline script reads localStorage before CSS paints — eliminates theme flash #}
+<script>
+  (function(){
+    var t = localStorage.getItem('theme');
+    if(t) document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="page-wrap{% block page_wrap_class %}{% endblock %}">
+
+  {# Top bar: branding + theme toggle #}
+  <div class="topbar">
+    <h1 class="brand">
+      {% if session %}{{ session.name }}{% else %}CS Escape Room{% endif %}
+      {% if team %}&nbsp;·&nbsp; Team: <span>{{ team.name }}</span>{% endif %}
+    </h1>
+    <div class="theme-toggle">
+      <button id="btn-dark" onclick="setTheme('dark')">Dark</button>
+      <button id="btn-light" onclick="setTheme('light')">Light</button>
+    </div>
+  </div>
+
+  {# Door progress dial — shown when team is in play #}
+  {% block dial %}{% endblock %}
+
+  {# Main card #}
+  <div class="card">
+    <div class="card-body">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+function setTheme(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  localStorage.setItem('theme', mode);
+  document.getElementById('btn-dark').classList.toggle('active', mode === 'dark');
+  document.getElementById('btn-light').classList.toggle('active', mode === 'light');
+}
+// Set active toggle button on load
+(function(){
+  var t = document.documentElement.getAttribute('data-theme') || 'dark';
+  document.getElementById('btn-dark').classList.toggle('active', t === 'dark');
+  document.getElementById('btn-light').classList.toggle('active', t === 'light');
+})();
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
