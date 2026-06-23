@@ -110,10 +110,22 @@ class ChatPlusSecretInput(BaseInput):
 
     def get_form_context(self, activity, team, progress):
         from .models import LLMMessage
+        from .graders import resolve_config
+        cfg = resolve_config(activity, team)
         messages = LLMMessage.objects.filter(
-            team=team, activity=activity
+            team=team, activity=activity, blocked=False
         ).order_by("created_at")
-        return {"chat_messages": messages}
+        msg_count = messages.filter(role="user").count()
+        hint_after = cfg.get("hint_after_messages", None)
+        hint_text = cfg.get("hint", "")
+        show_hint = bool(hint_text and hint_after is not None and msg_count >= hint_after)
+        return {
+            "chat_messages": messages,
+            "msg_count": msg_count,
+            "hint": hint_text if show_hint else "",
+            "hint_text": hint_text,
+            "hint_after": hint_after,
+        }
 
     def parse_submission(self, request):
         # This input type handles two separate POST actions:
@@ -140,16 +152,16 @@ class MatchPairsInput(BaseInput):
     template_name = "escaperoom/activity_match_pairs.html"
 
     def get_form_context(self, activity, team, progress):
-        from .graders import resolve_config
+        from .graders import resolve_config, _get_team_pairs
         cfg = resolve_config(activity, team)
-        pairs = cfg.get("pairs", [])
+        selected = _get_team_pairs(cfg, team, activity)
 
-        # Scenarios in fixed order (their index is the grading key)
-        scenario_items = [{"idx": i, "scenario": p["scenario"]} for i, p in enumerate(pairs)]
+        # Scenarios in the team's deterministic order; idx is the original pair index
+        scenario_items = [{"idx": idx, "scenario": pair["scenario"]} for idx, pair in selected]
 
-        # Technique bank shuffled deterministically per team+activity
-        techniques = [p["technique"] for p in pairs]
-        rng = random.Random(team.pk * 6271 + activity.pk)
+        # Technique bank: techniques from selected pairs, shuffled independently
+        techniques = [pair["technique"] for _, pair in selected]
+        rng = random.Random(team.pk * 9973 + activity.pk)
         rng.shuffle(techniques)
 
         return {

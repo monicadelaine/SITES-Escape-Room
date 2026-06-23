@@ -284,9 +284,13 @@ def submit_view(request, slug, activity_id):
         return redirect("play", slug=slug)
 
     # Rate-limit: check last attempt timestamp
-    # Per-activity delay can be set via config["attempt_delay_seconds"]
+    # Per-activity delay can be set via config["attempt_delay_seconds"] and increases each attempt.
     cfg = resolve_config(activity, team)
-    attempt_delay = cfg.get("attempt_delay_seconds", RATE_LIMIT_SECONDS)
+    base_delay = cfg.get("attempt_delay_seconds", None)
+    if base_delay is not None:
+        attempt_delay = base_delay * max(1, progress.attempts)
+    else:
+        attempt_delay = RATE_LIMIT_SECONDS
 
     last = (
         AttemptLog.objects

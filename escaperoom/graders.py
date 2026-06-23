@@ -154,16 +154,29 @@ def grade_manual(activity, team, payload):
     return None, "Awaiting staff confirmation.", {}
 
 
+def _get_team_pairs(cfg, team, activity):
+    """
+    Return the deterministic subset and display order of pairs for this team+activity.
+    If config["scenario_count"] < len(pairs), a random subset is selected.
+    Returns a list of (original_index, pair_dict).
+    """
+    pairs = cfg.get("pairs", [])
+    count = min(cfg.get("scenario_count", len(pairs)), len(pairs))
+    rng = random.Random(team.pk * 6271 + activity.pk)
+    indices = rng.sample(range(len(pairs)), count)
+    return [(idx, pairs[idx]) for idx in indices]
+
+
 @register_grader("match_grader")
 def grade_match(activity, team, payload):
     """
     Match-pairs grader.  payload is a JSON string like {"0":"Urgency","1":"Authority",...}
-    mapping scenario index (str) → submitted technique name.
-    config["pairs"] is a list of {"scenario": "...", "technique": "..."} in correct order.
+    mapping original pair index (str) → submitted technique name.
+    Uses the same deterministic subset as the input handler.
     """
     import json as _json
     config = resolve_config(activity, team)
-    pairs = config.get("pairs", [])
+    selected = _get_team_pairs(config, team, activity)
 
     try:
         submitted = _json.loads(payload) if isinstance(payload, str) else {}
@@ -172,20 +185,20 @@ def grade_match(activity, team, payload):
 
     per_slot = {}
     correct_count = 0
-    for i, pair in enumerate(pairs):
-        is_correct = submitted.get(str(i)) == pair["technique"]
-        per_slot[str(i)] = is_correct
+    for idx, pair in selected:
+        is_correct = submitted.get(str(idx)) == pair["technique"]
+        per_slot[str(idx)] = is_correct
         if is_correct:
             correct_count += 1
 
-    if correct_count == len(pairs):
-        return True, f"All {len(pairs)} matches correct!", {
+    if correct_count == len(selected):
+        return True, f"All {len(selected)} matches correct!", {
             "slot_results": per_slot,
             "last_match": submitted,
         }
 
     detail = (
-        f"{correct_count} out of {len(pairs)} correct. "
+        f"{correct_count} out of {len(selected)} correct. "
         "Highlighted rows show which need adjusting."
     )
     return False, detail, {"slot_results": per_slot, "last_match": submitted}

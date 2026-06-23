@@ -72,7 +72,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write("(No --slug/--team given — running quick connectivity check)")
 
-        self.stdout.write(f"\nSystem prompt:\n  {system_prompt[:200]}{'…' if len(system_prompt) > 200 else ''}")
+        self.stdout.write(f"\nSystem prompt:\n  {system_prompt[:300]}{'…' if len(system_prompt) > 300 else ''}")
         self.stdout.write(f"\nSending: \"{options['message']}\"")
         self.stdout.write("-" * 60)
 
