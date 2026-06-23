@@ -605,51 +605,23 @@ def _body_manual_staff(cfg):
 
 
 def _body_match_pairs(cfg, team, act):
-    """Show the technique reference table + this team's specific 5 scenarios."""
-    from escaperoom.graders import _get_team_pairs
+    """Packet for social engineering: technique reference table only."""
     technique_descriptions = cfg.get("technique_descriptions", [])
 
-    # Build technique reference table
     if technique_descriptions:
         rows = "".join(
             f'<tr><td>{_h(td["name"])}</td><td>{_h(td["description"])}</td></tr>'
             for td in technique_descriptions
         )
-        table_html = (
-            '      <p><strong>Social Engineering Techniques — Reference</strong></p>\n'
+        return (
+            '      <p>Use this reference to identify which technique each scenario on the web page is using:</p>\n'
             '      <table class="technique-table">\n'
-            '        <thead><tr><th>Technique</th><th>What it exploits</th></tr></thead>\n'
+            '        <thead><tr><th>Technique</th><th>Description</th></tr></thead>\n'
             f'        <tbody>{rows}</tbody>\n'
             '      </table>\n'
         )
-    else:
-        table_html = ""
 
-    # Show this team's specific scenarios (deterministic selection)
-    if team and act:
-        selected = _get_team_pairs(cfg, team, act)
-        scenario_items = "".join(
-            f'<li>"{_h(pair["scenario"])}"</li>'
-            for _, pair in selected
-        )
-        scenarios_html = (
-            '      <p><strong>Your 5 scenarios to match:</strong></p>\n'
-            f'      <ul class="scenario-list">{scenario_items}</ul>\n'
-        )
-    else:
-        pairs = cfg.get("pairs", [])
-        scenario_items = "".join(f'<li>"{_h(p["scenario"])}"</li>' for p in pairs)
-        scenarios_html = (
-            '      <p><strong>Scenarios to match:</strong></p>\n'
-            f'      <ul class="scenario-list">{scenario_items}</ul>\n'
-        )
-
-    instructions = (
-        '      <p>On the web page, drag each technique label onto the scenario it describes. '
-        'Use the reference table above to help you decide.</p>'
-    )
-
-    return table_html + scenarios_html + instructions
+    return '      <p>(No technique descriptions defined.)</p>'
 
 
 def _body_pseudocode_order(cfg, team, act):
