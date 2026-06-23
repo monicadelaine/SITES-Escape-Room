@@ -1,10 +1,10 @@
 {% extends "escaperoom/base.html" %}
-{% block title %}Door {{ activity.order }} — {{ activity.title }}{% endblock %}
+{% block title %}Gate {{ activity.order }} — {{ activity.title }}{% endblock %}
 
 {% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
 
 {% block content %}
-<div class="eyebrow" style="--accent:var(--rose);">Door {{ activity.order }} — Cipher</div>
+<div class="eyebrow" style="--accent:var(--rose);">Gate {{ activity.order }} — Cipher</div>
 <h2>{{ activity.title }}</h2>
 
 <div class="ciphertext">{{ ciphertext }}</div>
@@ -14,7 +14,7 @@
 
 {% if last_result and last_result.activity_id == activity.pk %}
   {% if last_result.passed %}
-    <div class="result pass">Door {{ activity.order }} unlocked — message decoded.</div>
+    <div class="result pass">Gate {{ activity.order }} unlocked — message decoded.</div>
   {% endif %}
   <label>Decoded text</label>
   <div class="decoded-box {% if last_result.passed %}readable{% else %}garbled{% endif %}">

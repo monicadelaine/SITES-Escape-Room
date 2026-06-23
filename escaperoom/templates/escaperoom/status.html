@@ -9,6 +9,85 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'escaperoom/style.css' %}">
 <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
+<style>
+/* ── Gate icon ──────────────────────────────────────────── */
+.gate-icon {
+  width: 52px;
+  height: 48px;
+  display: block;
+  margin: 0 auto 2px;
+  overflow: visible;
+}
+
+/* Pillar / arch inherit currentColor */
+.gate-icon .g-pillar { fill: currentColor; }
+.gate-icon .g-arch   { fill: none; stroke: currentColor; stroke-width: 4.5; stroke-linecap: round; }
+.gate-icon .g-left rect,
+.gate-icon .g-right rect { fill: currentColor; }
+
+/* Panel transform anchors */
+.gate-icon .g-left  { transform-box: fill-box; transform-origin: left center; }
+.gate-icon .g-right { transform-box: fill-box; transform-origin: right center; }
+
+/* ── not_started: muted gray ────────────────────────────── */
+.gate-icon.not_started { color: var(--muted); opacity: 0.6; }
+
+/* ── in_progress: amber pulse ───────────────────────────── */
+.gate-icon.in_progress { color: var(--amber); animation: gatePulse 1.8s ease-in-out infinite; }
+
+@keyframes gatePulse {
+  0%, 100% { filter: drop-shadow(0 0 2px var(--amber)); }
+      50%  { filter: drop-shadow(0 0 10px var(--amber)); }
+}
+
+/* ── completed: green, panels open ─────────────────────── */
+.gate-icon.completed {
+  color: #22c55e;
+  filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.45));
+}
+.gate-icon.completed .g-left  { transform: scaleX(0); }
+.gate-icon.completed .g-right { transform: scaleX(0); }
+
+/* ── opening animation (temporary class on transition) ───── */
+.gate-icon.gate-opening {
+  animation: gateGlow 0.9s ease-out forwards;
+}
+.gate-icon.gate-opening .g-left  { animation: openGatePanel 0.55s cubic-bezier(0.4,0,0.2,1) forwards; }
+.gate-icon.gate-opening .g-right { animation: openGatePanel 0.55s cubic-bezier(0.4,0,0.2,1) forwards 0.04s; }
+
+@keyframes openGatePanel {
+  0%   { transform: scaleX(1); }
+  75%  { transform: scaleX(-0.06); }
+  100% { transform: scaleX(0); }
+}
+
+@keyframes gateGlow {
+  0%   { filter: drop-shadow(0 0 0   rgba(34, 197, 94, 0)); }
+  35%  { filter: drop-shadow(0 0 18px rgba(34, 197, 94, 0.9)); }
+  100% { filter: drop-shadow(0 0 5px  rgba(34, 197, 94, 0.45)); }
+}
+
+/* ── Cell wrapper ──────────────────────────────────────── */
+.gate-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px 4px;
+}
+.gate-attempts {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  line-height: 1;
+  min-height: 12px;
+}
+
+/* Wider columns for the icon grid */
+table.grid th, table.grid td { min-width: 64px; text-align: center; }
+table.grid th { font-size: 11px; padding: 6px 4px; }
+table.grid th:first-child,
+table.grid td:first-child { text-align: left; min-width: 90px; }
+</style>
 </head>
 <body>
 <div class="page-wrap wide">
@@ -50,11 +129,38 @@
             <td class="team-name">{{ row.team_name }}</td>
             {% for cell in row.cells %}
             <td data-activity="{{ cell.activity_id }}">
-              <span class="cell {{ cell.status }}" title="{{ cell.attempts }} attempt{{ cell.attempts|pluralize }}">
-                {% if cell.status == 'completed' %}✓
-                {% elif cell.status == 'in_progress' %}…
-                {% else %}·{% endif %}
-              </span>
+              <div class="gate-cell">
+                <svg class="gate-icon {{ cell.status }}"
+                     viewBox="0 0 44 42"
+                     data-status="{{ cell.status }}"
+                     title="{{ cell.attempts }} attempt{{ cell.attempts|pluralize }}">
+                  <!-- arch -->
+                  <path class="g-arch" d="M2 21 Q2 3 22 3 Q42 3 42 21"/>
+                  <!-- left pillar + cap -->
+                  <rect class="g-pillar" x="1"    y="18" width="7" height="24" rx="2"/>
+                  <rect class="g-pillar" x="-0.5" y="14" width="10" height="5" rx="1.5"/>
+                  <!-- right pillar + cap -->
+                  <rect class="g-pillar" x="36"   y="18" width="7" height="24" rx="2"/>
+                  <rect class="g-pillar" x="34.5" y="14" width="10" height="5" rx="1.5"/>
+                  <!-- left gate panel (hinge: left edge of group → left pillar's right side) -->
+                  <g class="g-left">
+                    <rect x="8"    y="19" width="2.5" height="23" rx="1"/>
+                    <rect x="19.5" y="19" width="2.5" height="23" rx="1"/>
+                    <rect x="8"    y="23" width="14"  height="2.5" rx="0.5"/>
+                    <rect x="8"    y="30" width="14"  height="2.5" rx="0.5"/>
+                    <rect x="8"    y="37" width="14"  height="2.5" rx="0.5"/>
+                  </g>
+                  <!-- right gate panel (hinge: right edge of group → right pillar's left side) -->
+                  <g class="g-right">
+                    <rect x="22"   y="19" width="2.5" height="23" rx="1"/>
+                    <rect x="33.5" y="19" width="2.5" height="23" rx="1"/>
+                    <rect x="22"   y="23" width="14"  height="2.5" rx="0.5"/>
+                    <rect x="22"   y="30" width="14"  height="2.5" rx="0.5"/>
+                    <rect x="22"   y="37" width="14"  height="2.5" rx="0.5"/>
+                  </g>
+                </svg>
+                <div class="gate-attempts">{% if cell.attempts > 0 %}{{ cell.attempts }}{% endif %}</div>
+              </div>
             </td>
             {% endfor %}
           </tr>
@@ -95,6 +201,14 @@ function updateCountdown() {
   if (el) el.textContent = remaining > 0 ? fmt(remaining) : '00:00';
 }
 
+// Track previous status per cell to detect transitions
+var cellStates = {};
+document.querySelectorAll('.gate-icon[data-status]').forEach(function(icon) {
+  var td = icon.closest('td[data-activity]');
+  var tr = icon.closest('tr[data-team]');
+  if (td && tr) cellStates[tr.dataset.team + ':' + td.dataset.activity] = icon.dataset.status;
+});
+
 function repaintGrid(teams) {
   teams.forEach(function(row) {
     var tr = document.querySelector('tr[data-team="' + row.team_id + '"]');
@@ -102,11 +216,33 @@ function repaintGrid(teams) {
     row.cells.forEach(function(cell) {
       var td = tr.querySelector('td[data-activity="' + cell.activity_id + '"]');
       if (!td) return;
-      var span = td.querySelector('.cell');
-      if (!span) return;
-      span.className = 'cell ' + cell.status;
-      span.title = cell.attempts + ' attempt' + (cell.attempts !== 1 ? 's' : '');
-      span.textContent = cell.status === 'completed' ? '✓' : cell.status === 'in_progress' ? '…' : '·';
+      var icon = td.querySelector('.gate-icon');
+      var attEl = td.querySelector('.gate-attempts');
+      if (!icon) return;
+
+      var key = row.team_id + ':' + cell.activity_id;
+      var prev = cellStates[key];
+      var next = cell.status;
+
+      icon.title = cell.attempts + ' attempt' + (cell.attempts !== 1 ? 's' : '');
+      if (attEl) attEl.textContent = cell.attempts > 0 ? cell.attempts : '';
+
+      if (next !== prev) {
+        icon.classList.remove('not_started', 'in_progress', 'completed', 'gate-opening');
+        icon.classList.add(next);
+        icon.dataset.status = next;
+
+        // Play opening animation when a gate is newly completed
+        if (next === 'completed' && prev && prev !== 'completed') {
+          // Tiny delay ensures `completed` styles (green colour) apply first
+          setTimeout(function() {
+            icon.classList.add('gate-opening');
+            setTimeout(function() { icon.classList.remove('gate-opening'); }, 950);
+          }, 16);
+        }
+
+        cellStates[key] = next;
+      }
     });
   });
 }
@@ -115,24 +251,18 @@ function poll() {
   fetch(statusJsonUrl)
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.end_time) {
-        endTimeISO = data.end_time;
-      }
+      if (data.end_time) endTimeISO = data.end_time;
       repaintGrid(data.teams);
       updateCountdown();
     })
     .catch(function() {});
 }
 
-// Poll every 4 seconds
 poll();
 setInterval(poll, 4000);
-
-// Update countdown every second independently
 setInterval(updateCountdown, 1000);
 updateCountdown();
 
-// Pre-wrap end_time for JSON embedding
 {% if end_time_iso %}
 endTimeISO = "{{ end_time_iso }}";
 {% endif %}

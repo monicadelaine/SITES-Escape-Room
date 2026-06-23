@@ -6,14 +6,14 @@ Generates one printable HTML sheet per team per activity.
 Layout (portrait letter):
   ┌─────────────────────────────┐
   │  TOP 1/3 — team name +      │  ← stays visible when sheet is folded
-  │            door title +      │
+  │            gate title +      │
   │            LOGIN PASSWORD    │
   ├ ─ ─ ─ ─ fold here ─ ─ ─ ─ ┤
   │  CS/AI/Cybersecurity context │
   │  Activity instructions       │
   └─────────────────────────────┘
 
-Output files:  packets/<TeamName>-door-<N>.html
+Output files:  packets/<TeamName>-gate-<N>.html
 Open in a browser and use File → Print (or Cmd/Ctrl+P).
 """
 import json as _json
@@ -166,7 +166,7 @@ PAGE_HTML = """\
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>{team_name} · Door {order} · {title}</title>
+<title>{team_name} · Gate {order} · {title}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600&display=swap');
 
@@ -248,8 +248,8 @@ PAGE_HTML = """\
     font-size: 20pt;
     font-weight: 700;
     color: {cover_text};
-    background: rgba(255,255,255,0.08);
-    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.04);
+    border: 1.5px solid rgba(0,0,0,0.12);
     border-radius: 8px;
     padding: 0.05in 0.25in;
     letter-spacing: .08em;
@@ -488,8 +488,15 @@ PAGE_HTML = """\
   <!-- TOP 1/3 — visible when folded -->
   <div class="cover">
     <div class="cover-event">{session_name}</div>
+    <svg width="52" height="44" viewBox="0 0 52 44" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:0.06in; color:{cover_text};">
+      <rect x="3" y="17" width="7" height="27" rx="2" fill="currentColor"/>
+      <rect x="42" y="17" width="7" height="27" rx="2" fill="currentColor"/>
+      <path d="M3 21 Q3 3 26 3 Q49 3 49 21" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <rect x="0.5" y="14" width="13" height="5" rx="1.5" fill="currentColor"/>
+      <rect x="38.5" y="14" width="13" height="5" rx="1.5" fill="currentColor"/>
+    </svg>
     <div class="cover-team">{team_name}</div>
-    <div class="cover-door">Door {order}</div>
+    <div class="cover-door">Gate {order}</div>
     <div class="cover-title">{title}</div>
     {password_html}
   </div>
@@ -512,7 +519,7 @@ PAGE_HTML = """\
 </html>
 """
 
-# Per-door accent/cover colours  (cycles via modulo for doors > 7)
+# Per-gate accent/cover colours  (cycles via modulo for gates > 7)
 _THEME_PALETTE = [
     {"accent": "#f5b942", "cover_text": "#f5b942"},  # 1 amber
     {"accent": "#ef6a6a", "cover_text": "#ef6a6a"},  # 2 rose
@@ -523,18 +530,17 @@ _THEME_PALETTE = [
     {"accent": "#60a5fa", "cover_text": "#60a5fa"},  # 7 blue
 ]
 _THEME_BASE = {
-    "cover_bg":    "#0e1015",
-    "cover_dim":   "#9a9eac",
-    "cover_accent": "#e9e7e1",
-    "fold_color":  "#3a3d48",
+    "cover_bg":    "#fafaf8",
+    "cover_dim":   "#6b6f7b",
+    "cover_accent": "#1c1e24",
+    "fold_color":  "#b8b5ac",
 }
 
 def _theme(order):
     palette = _THEME_PALETTE[(order - 1) % len(_THEME_PALETTE)]
     return {**_THEME_BASE, **palette}
 
-# Keep DOOR_THEMES for backwards compat in case anything imports it
-DOOR_THEMES = {i + 1: {**_THEME_BASE, **p} for i, p in enumerate(_THEME_PALETTE)}
+GATE_THEMES = {i + 1: {**_THEME_BASE, **p} for i, p in enumerate(_THEME_PALETTE)}
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -600,7 +606,7 @@ def _body_manual_staff(cfg):
     return (
         f'      <p>{_h(instructions)}</p>\n'
         '      <p class="staff-note">Nothing to submit on the web — '
-        'a staff member will mark this door complete once they see you finish.</p>'
+        'a staff member will mark this gate complete once they see you finish.</p>'
     )
 
 
@@ -749,13 +755,13 @@ class Command(BaseCommand):
                 )
 
                 safe = team.name.replace(" ", "_")
-                out_path = out_dir / f"{safe}-door-{act.order}.html"
+                out_path = out_dir / f"{safe}-gate-{act.order}.html"
                 out_path.write_text(html, encoding="utf-8")
                 self.stdout.write(f"  {out_path}")
                 count += 1
 
         self.stdout.write(self.style.SUCCESS(
             f"\n{count} sheet(s) written to {out_dir}/ "
-            f"({len(teams)} team(s) × {len(activities)} door(s)).\n"
+            f"({len(teams)} team(s) × {len(activities)} gate(s)).\n"
             "Open any file in a browser and use File → Print."
         ))

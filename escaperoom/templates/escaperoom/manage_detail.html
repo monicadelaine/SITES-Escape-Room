@@ -36,7 +36,7 @@
 {% if progress.status != 'completed' %}
 <form method="post" action="{% url 'manage_accept' slug=session.slug team_id=team.pk activity_id=activity.pk %}"
       style="margin-bottom:8px;"
-      onsubmit="return confirm('Mark this door as completed for {{ team.name }}?');">
+      onsubmit="return confirm('Mark this gate as completed for {{ team.name }}?');">
   {% csrf_token %}
   <button type="submit">Accept &amp; Advance</button>
 </form>
@@ -45,15 +45,15 @@
 {# ---- Advance To (testing helper) ---- #}
 <details style="margin-bottom:16px;">
   <summary style="font-family:'IBM Plex Mono',monospace; font-size:12px; cursor:pointer; color:var(--text-dim);">
-    Testing: Jump {{ team.name }} directly to this door
+    Testing: Jump {{ team.name }} directly to this gate
   </summary>
   <p style="font-size:12px; color:var(--text-dim); margin:6px 0;">
-    Marks all earlier doors as complete and unlocks this one — useful for testing without playing through the whole sequence.
+    Marks all earlier gates as complete and unlocks this one — useful for testing without playing through the whole sequence.
   </p>
   <form method="post" action="{% url 'manage_advance_to' slug=session.slug team_id=team.pk activity_id=activity.pk %}"
-        onsubmit="return confirm('Advance {{ team.name }} to Door {{ activity.order }}? This marks all earlier doors as completed.');">
+        onsubmit="return confirm('Advance {{ team.name }} to Gate {{ activity.order }}? This marks all earlier gates as completed.');">
     {% csrf_token %}
-    <button type="submit" class="ghost">Jump to Door {{ activity.order }}</button>
+    <button type="submit" class="ghost">Jump to Gate {{ activity.order }}</button>
   </form>
 </details>
 

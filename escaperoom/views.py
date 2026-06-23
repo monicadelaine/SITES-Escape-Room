@@ -415,7 +415,7 @@ def chat_send_view(request, slug, activity_id):
     # Hard cap on total messages
     total_turns = LLMMessage.objects.filter(team=team, activity=activity).count()
     if total_turns >= 60:
-        return JsonResponse({"error": "Message limit reached for this door."}, status=429)
+        return JsonResponse({"error": "Message limit reached for this gate."}, status=429)
 
     # Profanity / safety pre-check (simple keyword list)
     _BLOCKED_KEYWORDS = [

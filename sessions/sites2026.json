@@ -23,7 +23,7 @@
   "activities": [
     {
       "order": 1,
-      "title": "The Shifting Door",
+      "title": "The Shifting Gate",
       "input_type": "blank_fill",
       "grader_type": "test_case_runner",
       "config": {
@@ -35,7 +35,7 @@
 
     {
       "order": 2,
-      "title": "The Coded Door",
+      "title": "The Coded Gate",
       "input_type": "integer",
       "grader_type": "decode_compare",
       "config": {
@@ -48,7 +48,7 @@
 
     {
       "order": 3,
-      "title": "The Guarded Door",
+      "title": "The Guarded Gate",
       "input_type": "chat_plus_secret",
       "grader_type": "secret_match",
       "config": {
@@ -142,11 +142,11 @@
 
     {
       "order": 7,
-      "title": "The Last Door",
+      "title": "The Last Gate",
       "input_type": "staff_only",
       "grader_type": "manual_staff",
       "config": {
-        "instructions": "Find the Raspberry Pi at station 4 and follow its on-screen prompt. There is nothing to submit here — once a staff member sees you complete it, they will open this door for you from their screen."
+        "instructions": "Students will create a simple NeuroBlock program that uses their forearm muscle activity (EMG) to control a VEX AIM robot and guide it to the final clue."
       }
     }
   ]

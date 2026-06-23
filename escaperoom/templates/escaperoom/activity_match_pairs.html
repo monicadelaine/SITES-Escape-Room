@@ -1,5 +1,5 @@
 {% extends "escaperoom/base.html" %}
-{% block title %}Door {{ activity.order }} — {{ activity.title }}{% endblock %}
+{% block title %}Gate {{ activity.order }} — {{ activity.title }}{% endblock %}
 
 {% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
 
@@ -90,7 +90,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="eyebrow" style="--accent:var(--rose);">Door {{ activity.order }} — Security</div>
+<div class="eyebrow" style="--accent:var(--rose);">Gate {{ activity.order }} — Security</div>
 <h2>{{ activity.title }}</h2>
 
 {% if last_result and last_result.activity_id == activity.pk %}

@@ -1,10 +1,10 @@
 {% extends "escaperoom/base.html" %}
-{% block title %}Door {{ activity.order }} — {{ activity.title }}{% endblock %}
+{% block title %}Gate {{ activity.order }} — {{ activity.title }}{% endblock %}
 
 {% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
 
 {% block content %}
-<div class="eyebrow">Door {{ activity.order }} — Code</div>
+<div class="eyebrow">Gate {{ activity.order }} — Code</div>
 <h2>{{ activity.title }}</h2>
 
 {% if last_result and last_result.activity_id == activity.pk %}

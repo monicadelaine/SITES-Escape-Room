@@ -1,10 +1,10 @@
 {% extends "escaperoom/base.html" %}
-{% block title %}Door {{ activity.order }} — {{ activity.title }}{% endblock %}
+{% block title %}Gate {{ activity.order }} — {{ activity.title }}{% endblock %}
 
 {% block dial %}{% include "escaperoom/_dial.html" %}{% endblock %}
 
 {% block content %}
-<div class="eyebrow">Door {{ activity.order }} — Offline</div>
+<div class="eyebrow">Gate {{ activity.order }} — Offline</div>
 <h2>{{ activity.title }}</h2>
 
 <div class="code-block" style="white-space:normal; line-height:1.6;">{{ instructions }}</div>

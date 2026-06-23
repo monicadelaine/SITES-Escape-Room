@@ -130,7 +130,7 @@ def manage_advance_to(request, slug, team_id, activity_id):
         session=session,
         staff_user=request.user,
         action="advance_to",
-        detail=f"{team.name} advanced to Door {activity.order}: {activity.title}",
+        detail=f"{team.name} advanced to Gate {activity.order}: {activity.title}",
     )
 
     return redirect("manage_detail", slug=slug, team_id=team_id, activity_id=activity_id)
