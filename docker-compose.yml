@@ -20,17 +20,18 @@ services:
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 60"
 
   nginx:
-    image: nginx:1.25-alpine
+    build: ./nginx
     restart: unless-stopped
     ports:
       - "443:443"
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - sslcerts:/etc/nginx/ssl
       - staticfiles:/app/staticfiles:ro
     depends_on:
       - web
 
 volumes:
   staticfiles:
+  sslcerts:
