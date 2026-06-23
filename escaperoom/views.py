@@ -458,29 +458,21 @@ def chat_send_view(request, slug, activity_id):
 
 def _call_gemini(api_key, system_prompt, team, activity):
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key, transport="rest")
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=api_key)
 
         # Pick the newest available Flash-tier model
+        model_name = "gemini-2.5-flash"
         try:
-            available = [
-                m.name for m in genai.list_models()
-                if "generateContent" in m.supported_generation_methods
-            ]
+            available = [m.name for m in client.models.list()]
             flash_models = [m for m in available if "flash" in m.lower()]
-            model_name = flash_models[0].replace("models/", "") if flash_models else "gemini-2.5-flash"
+            if flash_models:
+                model_name = flash_models[0].replace("models/", "")
         except Exception:
-            model_name = "gemini-2.5-flash"
+            pass
 
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            system_instruction=system_prompt,
-            # Omit safety_settings — Gemini's defaults are appropriate for a
-            # school event, and custom formats vary by SDK version.
-        )
-
-        # Build history: all non-blocked messages in order, except the last
-        # user turn which we send fresh via send_message().
         all_msgs = list(
             LLMMessage.objects.filter(team=team, activity=activity, blocked=False)
             .order_by("created_at")
@@ -489,17 +481,16 @@ def _call_gemini(api_key, system_prompt, team, activity):
         if not all_msgs or all_msgs[-1].role != "user":
             return "I'm here. What would you like to know?"
 
-        # Build the full conversation as a contents list so we can use
-        # generate_content() rather than start_chat()/send_message().
-        # The chat-session path triggers gRPC transport which ignores
-        # genai.configure(api_key=...) in SDK v0.8.x and falls back to
-        # Application Default Credentials — causing DefaultCredentialsError.
         contents = [
-            {"role": msg.role, "parts": [msg.content]}
+            types.Content(role=msg.role, parts=[types.Part(text=msg.content)])
             for msg in all_msgs
         ]
 
-        response = model.generate_content(contents)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=types.GenerateContentConfig(system_instruction=system_prompt),
+        )
         return response.text
 
     except Exception as exc:

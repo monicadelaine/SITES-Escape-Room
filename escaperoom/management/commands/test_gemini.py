@@ -78,35 +78,34 @@ class Command(BaseCommand):
 
         # ---- call Gemini ---------------------------------------------------
         try:
-            import google.generativeai as genai
+            from google import genai
+            from google.genai import types
         except ImportError:
             raise CommandError(
-                "google-generativeai is not installed. Run: pip install google-generativeai"
+                "google-genai is not installed. Run: pip install google-genai"
             )
 
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
 
         # List available models so we can confirm the right one is accessible
+        model_name = "gemini-2.5-flash"
         try:
-            available = [
-                m.name for m in genai.list_models()
-                if "generateContent" in m.supported_generation_methods
-            ]
+            available = [m.name for m in client.models.list()]
             flash_models = [m for m in available if "flash" in m.lower()]
             self.stdout.write(f"Flash-tier models available: {flash_models or '(none found)'}")
-            model_name = flash_models[0].replace("models/", "") if flash_models else "gemini-1.5-flash"
+            if flash_models:
+                model_name = flash_models[0].replace("models/", "")
         except Exception as e:
-            self.stdout.write(f"Could not list models ({e}) — defaulting to gemini-1.5-flash")
-            model_name = "gemini-1.5-flash"
+            self.stdout.write(f"Could not list models ({e}) — defaulting to {model_name}")
 
         self.stdout.write(f"Using model: {model_name}\n")
 
         try:
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                system_instruction=system_prompt,
+            response = client.models.generate_content(
+                model=model_name,
+                contents=options["message"],
+                config=types.GenerateContentConfig(system_instruction=system_prompt),
             )
-            response = model.generate_content(options["message"])
             reply = response.text
         except Exception as exc:
             raise CommandError(f"Gemini API error: {exc}")
