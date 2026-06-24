@@ -149,7 +149,7 @@
       "input_type": "staff_only",
       "grader_type": "manual_staff",
       "config": {
-        "instructions": "Students will create a simple NeuroBlock program that uses their forearm muscle activity (EMG) to control a VEX AIM robot and guide it to the final clue."
+        "instructions": "Students will create a simple NeuroBlock program that uses their forearm muscle activity (EMG) to control a VEX AIM robot and guide it to the final clue.  See https://canva.link/yzgsxgq3t1tqgfm for instructions"
       }
     }
   ]
