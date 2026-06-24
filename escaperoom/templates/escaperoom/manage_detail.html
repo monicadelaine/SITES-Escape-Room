@@ -35,10 +35,10 @@
 {# ---- Accept & Advance ---- #}
 {% if progress.status != 'completed' %}
 <form method="post" action="{% url 'manage_accept' slug=session.slug team_id=team.pk activity_id=activity.pk %}"
-      style="margin-bottom:8px;"
-      onsubmit="return confirm('Mark this gate as completed for {{ team.name }}?');">
+      style="margin-bottom:8px;" id="form-accept">
   {% csrf_token %}
-  <button type="submit">Accept &amp; Advance</button>
+  <div class="inline-confirm" data-form="form-accept" data-label="Accept &amp; Advance"
+       data-message="Mark this gate as completed for {{ team.name }}?"></div>
 </form>
 {% endif %}
 
@@ -51,9 +51,10 @@
     Marks all earlier gates as complete and unlocks this one — useful for testing without playing through the whole sequence.
   </p>
   <form method="post" action="{% url 'manage_advance_to' slug=session.slug team_id=team.pk activity_id=activity.pk %}"
-        onsubmit="return confirm('Advance {{ team.name }} to Gate {{ activity.order }}? This marks all earlier gates as completed.');">
+        id="form-advance">
     {% csrf_token %}
-    <button type="submit" class="ghost">Jump to Gate {{ activity.order }}</button>
+    <div class="inline-confirm" data-form="form-advance" data-label="Jump to Gate {{ activity.order }}" data-ghost="true"
+         data-message="Advance {{ team.name }} to Gate {{ activity.order }}? This marks all earlier gates as completed."></div>
   </form>
 </details>
 
@@ -132,4 +133,53 @@
 <p class="footer-note">No chat messages yet.</p>
 {% endif %}
 {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Inline two-step confirmation — no browser confirm() dialog needed.
+document.querySelectorAll('.inline-confirm').forEach(function (el) {
+  var formId  = el.dataset.form;
+  var label   = el.dataset.label;
+  var message = el.dataset.message;
+  var ghost   = el.dataset.ghost === 'true';
+  var cls     = ghost ? 'ghost' : '';
+
+  // Initial button
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = cls;
+  btn.innerHTML = label;
+  el.appendChild(btn);
+
+  btn.addEventListener('click', function () {
+    // Replace with confirmation row
+    el.innerHTML = '';
+
+    var msg = document.createElement('span');
+    msg.style.cssText = 'font-size:13px; color:var(--text); margin-right:10px;';
+    msg.textContent = message;
+
+    var yes = document.createElement('button');
+    yes.type = 'submit';
+    yes.form = formId;
+    yes.textContent = 'Yes, confirm';
+    yes.style.marginRight = '6px';
+
+    var no = document.createElement('button');
+    no.type = 'button';
+    no.className = 'ghost';
+    no.textContent = 'Cancel';
+    no.addEventListener('click', function () {
+      // Restore original button
+      el.innerHTML = '';
+      el.appendChild(btn);
+    });
+
+    el.appendChild(msg);
+    el.appendChild(yes);
+    el.appendChild(no);
+  });
+});
+</script>
 {% endblock %}
