@@ -1,6 +1,7 @@
 {
   "session_name": "SITES 2026",
   "slug": "sites2026",
+  "login_url": "https://66.179.191.88/sites2026/login/",
 
   "teams": [
     { "name": "Eagles",   "password": "red12"    },

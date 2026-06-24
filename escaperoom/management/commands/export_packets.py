@@ -255,6 +255,24 @@ PAGE_HTML = """\
     letter-spacing: .08em;
   }}
 
+  .cover-url-label {{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 7.5pt;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: {cover_dim};
+    margin-top: 0.1in;
+    margin-bottom: 0.03in;
+  }}
+
+  .cover-url {{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11pt;
+    font-weight: 600;
+    color: {cover_text};
+    letter-spacing: .02em;
+  }}
+
   /* ---- fold indicator ---- */
   .fold-rule {{
     flex: 0 0 0;
@@ -499,6 +517,7 @@ PAGE_HTML = """\
     <div class="cover-door">Gate {order}</div>
     <div class="cover-title">{title}</div>
     {password_html}
+    {url_html}
   </div>
 
   <!-- fold line -->
@@ -693,8 +712,9 @@ class Command(BaseCommand):
         except Session.DoesNotExist:
             raise CommandError(f"Session '{slug}' not found.")
 
-        # Try to load plain-text passwords from sessions/<slug>.json
+        # Try to load plain-text passwords and login_url from sessions/<slug>.json
         password_map = {}
+        login_url = ""
         json_candidates = [
             Path(f"sessions/{slug}.json"),
             Path(f"sessions/{slug.lower()}.json"),
@@ -706,7 +726,10 @@ class Command(BaseCommand):
                     with open(candidate, encoding="utf-8") as f:
                         data = _json.load(f)
                     password_map = {t["name"]: t["password"] for t in data.get("teams", [])}
+                    login_url = data.get("login_url", "")
                     self.stdout.write(f"  Passwords loaded from {candidate}")
+                    if login_url:
+                        self.stdout.write(f"  Login URL: {login_url}")
                 except Exception:
                     pass
                 break
@@ -743,12 +766,22 @@ class Command(BaseCommand):
                 else:
                     password_html = ""
 
+                # Login URL block for cover
+                if login_url:
+                    url_html = (
+                        '<div class="cover-url-label">Login at</div>'
+                        f'<div class="cover-url">{_h(login_url)}</div>'
+                    )
+                else:
+                    url_html = ""
+
                 html = PAGE_HTML.format(
                     session_name  = _h(session.name),
                     team_name     = _h(team.name),
                     order         = act.order,
                     title         = _h(act.title),
                     password_html = password_html,
+                    url_html      = url_html,
                     cs_block_html = cs_block,
                     body_html     = body,
                     **theme,

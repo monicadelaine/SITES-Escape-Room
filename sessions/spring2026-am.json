@@ -1,6 +1,7 @@
 {
   "session_name": "Spring 2026 CS Outreach",
   "slug": "spring2026-am",
+  "login_url": "https://escaperoom.eng.ua.edu/spring2026-am/login/",
 
   "teams": [
     { "name": "Falcons",  "password": "blue42"  },
