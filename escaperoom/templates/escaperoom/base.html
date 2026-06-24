@@ -23,10 +23,13 @@
 
   {# Top bar: branding + theme toggle #}
   <div class="topbar">
-    <h1 class="brand">
-      {% if session %}{{ session.name }}{% else %}CS Escape Room{% endif %}
-      {% if team %}&nbsp;·&nbsp; Team: <span>{{ team.name }}</span>{% endif %}
-    </h1>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <img src="{% static 'escaperoom/images/ua-engineering-logo.jpg' %}" alt="UA Engineering" class="ua-header-logo">
+      <h1 class="brand">
+        {% if session %}{{ session.name }}{% else %}CS Escape Room{% endif %}
+        {% if team %}&nbsp;·&nbsp; Team: <span>{{ team.name }}</span>{% endif %}
+      </h1>
+    </div>
     <div class="theme-toggle">
       <button id="btn-dark" onclick="setTheme('dark')">Dark</button>
       <button id="btn-light" onclick="setTheme('light')">Light</button>
@@ -43,9 +46,6 @@
     </div>
   </div>
 
-  <div class="ua-logo-footer">
-    <img src="{% static 'escaperoom/images/ua-engineering-logo.jpg' %}" alt="The University of Alabama — Lee J. Styslinger Jr. College of Engineering">
-  </div>
 
 </div>
 
