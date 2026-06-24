@@ -23,13 +23,10 @@
 
   {# Top bar: branding + theme toggle #}
   <div class="topbar">
-    <div style="display:flex; align-items:center; gap:14px;">
-      <img src="{% static 'escaperoom/images/ua-engineering-logo.jpg' %}" alt="UA Engineering" class="ua-header-logo">
-      <h1 class="brand">
-        {% if session %}{{ session.name }}{% else %}CS Escape Room{% endif %}
-        {% if team %}&nbsp;·&nbsp; Team: <span>{{ team.name }}</span>{% endif %}
-      </h1>
-    </div>
+    <h1 class="brand">
+      {% if session %}{{ session.name }}{% else %}CS Escape Room{% endif %}
+      {% if team %}&nbsp;·&nbsp; Team: <span>{{ team.name }}</span>{% endif %}
+    </h1>
     <div class="theme-toggle">
       <button id="btn-dark" onclick="setTheme('dark')">Dark</button>
       <button id="btn-light" onclick="setTheme('light')">Light</button>
