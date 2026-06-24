@@ -15,26 +15,26 @@
   --code-text: #cfd3da;
   --amber: #f5b942;
   --rose: #ef6a6a;
-  --violet: #a78bfa;
-  --teal: #2bd9c8;
+  --violet: #c9384f;   /* lighter crimson for secondary accents */
+  --teal: #9E1B32;     /* UA Crimson */
   --good: #34d399;
   --bad: #f15b5b;
   --accent: var(--teal);
 }
 
 [data-theme="light"] {
-  --bg: #f3f1ea;
+  --bg: #f5f0f1;
   --panel: #ffffff;
-  --panel-2: #ece9e1;
+  --panel-2: #f0e8ea;
   --line: rgba(0, 0, 0, .1);
   --text: #1c1e24;
   --text-dim: #6b6f7b;
-  --code-bg: #f7f5ee;
+  --code-bg: #fdf8f9;
   --code-text: #2b2d34;
   --amber: #c98a12;
   --rose: #d14b4b;
-  --violet: #7c5cd6;
-  --teal: #0e9c8e;
+  --violet: #a02035;   /* medium crimson */
+  --teal: #8b1729;     /* UA Crimson (slightly deeper on light bg) */
   --good: #1f9d6f;
   --bad: #d14b4b;
 }
@@ -98,7 +98,7 @@ body {
 }
 .theme-toggle button.active {
   background: var(--teal);
-  color: #0c0e12;
+  color: #ffffff;
   font-weight: 700;
 }
 
@@ -213,7 +213,7 @@ button, .btn {
   border: none;
   cursor: pointer;
   background: var(--accent);
-  color: #0c0e12;
+  color: #ffffff;
   display: inline-block;
   text-decoration: none;
 }
