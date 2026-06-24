@@ -35,7 +35,7 @@
     <input type="number" name="shift_guess" id="shift_guess"
            placeholder="Shift (0–25)" min="0" max="25"
            style="max-width:160px;" required>
-    <button type="submit">Try This Shift</button>
+    <button type="submit" {% if rate_limited %}disabled data-cooldown="{{ remaining_delay }}"{% endif %}>Try This Shift</button>
   </div>
   <p class="footer-note">
     Each letter in the ciphertext was shifted a fixed number of places in the alphabet.

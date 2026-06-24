@@ -60,6 +60,34 @@ function setTheme(mode) {
 })();
 </script>
 
+<script>
+// Cooldown: any submit button with data-cooldown="N" is disabled for N seconds,
+// showing a live countdown, then re-enabled automatically.
+(function () {
+  document.querySelectorAll('button[data-cooldown]').forEach(function (btn) {
+    var secs = parseInt(btn.dataset.cooldown, 10);
+    if (!secs || secs <= 0) return;
+    var orig = btn.textContent;
+    btn.disabled = true;
+    btn.style.opacity = '0.45';
+    btn.style.cursor = 'not-allowed';
+    function tick() {
+      btn.textContent = orig + ' (' + secs + 's)';
+      if (secs <= 0) {
+        btn.textContent = orig;
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+        return;
+      }
+      secs--;
+      setTimeout(tick, 1000);
+    }
+    tick();
+  });
+})();
+</script>
+
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>

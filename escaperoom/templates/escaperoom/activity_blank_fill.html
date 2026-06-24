@@ -31,7 +31,7 @@
            placeholder="e.g. largest = n"
            value="{{ last_answer|default:'' }}"
            autocomplete="off" spellcheck="false" required>
-    <button type="submit">Test My Code</button>
+    <button type="submit" {% if rate_limited %}disabled data-cooldown="{{ remaining_delay }}"{% endif %}>Test My Code</button>
   </div>
   <p class="footer-note">Tip: use 4 spaces for indentation inside the if-block.</p>
 </form>

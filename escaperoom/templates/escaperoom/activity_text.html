@@ -28,7 +28,7 @@
   <label for="text_answer">Your answer:</label>
   <div class="row">
     <input type="text" id="text_answer" name="text_answer" placeholder="Enter your answer" required>
-    <button type="submit">Submit</button>
+    <button type="submit" {% if rate_limited %}disabled data-cooldown="{{ remaining_delay }}"{% endif %}>Submit</button>
   </div>
 </form>
 

@@ -137,7 +137,7 @@
   {% csrf_token %}
   <div id="hidden-inputs"></div>
   <div class="row">
-    <button type="submit">Check Order</button>
+    <button type="submit" {% if rate_limited %}disabled data-cooldown="{{ remaining_delay }}"{% endif %}>Check Order</button>
     <button type="button" onclick="resetOrder()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);">Reset</button>
   </div>
 </form>

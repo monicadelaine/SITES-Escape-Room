@@ -135,7 +135,7 @@
 <form method="post" action="{% url 'submit' slug=session.slug activity_id=activity.pk %}" id="match-form">
   {% csrf_token %}
   <input type="hidden" name="match_answer" id="match-input">
-  <button type="submit" id="check-btn">Check Answers</button>
+  <button type="submit" id="check-btn" {% if rate_limited %}disabled data-cooldown="{{ remaining_delay }}"{% endif %}>Check Answers</button>
 </form>
 
 {% if progress.attempts > 0 %}
