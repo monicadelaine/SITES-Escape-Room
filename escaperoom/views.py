@@ -212,12 +212,14 @@ def play_view(request, slug):
     activity, progress = _current_activity(team)
 
     if activity is None:
-        # All doors completed
+        # All gates completed
         members = list(team.members.order_by("order"))
+        total_gates = Activity.objects.filter(session=session).count()
         return render(request, "escaperoom/complete.html", {
             "session": session,
             "team": team,
             "members": members,
+            "total": total_gates,
             "dial_states": _build_dial_states(team),
         })
 

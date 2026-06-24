@@ -5,8 +5,8 @@
 
 {% block content %}
 <div class="complete-wrap">
-  <div class="trophy">✓ ✓ ✓ ✓</div>
-  <h2 style="text-align:center;">All four gates are open</h2>
+  <div class="trophy">{% for i in dial_states %}✓ {% endfor %}</div>
+  <h2 style="text-align:center;">All {{ total }} gates are open</h2>
   <p class="footer-note" style="margin-bottom:18px; text-align:center;">
     Nice work, {{ team.name }}
     {% if members %} —
