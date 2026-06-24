@@ -306,16 +306,16 @@ def submit_view(request, slug, activity_id):
             input_handler = INPUT_REGISTRY[activity.input_type]()
             extra_ctx = input_handler.get_form_context(activity, team, progress)
             remaining_delay = max(1, round(attempt_delay - elapsed))
-        return render(request, input_handler.template_name, {
-                "session": session,
-                "team": team,
-                "activity": activity,
-                "progress": progress,
-                "rate_limited": True,
-                "attempt_delay": int(attempt_delay),
-                "remaining_delay": remaining_delay,
-                **extra_ctx,
-            })
+            return render(request, input_handler.template_name, {
+                    "session": session,
+                    "team": team,
+                    "activity": activity,
+                    "progress": progress,
+                    "rate_limited": True,
+                    "attempt_delay": int(attempt_delay),
+                    "remaining_delay": remaining_delay,
+                    **extra_ctx,
+                })
 
     input_handler = INPUT_REGISTRY[activity.input_type]()
     payload = input_handler.parse_submission(request)
